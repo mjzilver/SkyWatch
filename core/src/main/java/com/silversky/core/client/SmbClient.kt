@@ -1,7 +1,11 @@
 package com.silversky.core.client
 
+import com.hierynomus.msdtyp.AccessMask
 import com.hierynomus.msfscc.FileAttributes
 import com.hierynomus.msfscc.fileinformation.FileIdBothDirectoryInformation
+import com.hierynomus.mssmb2.SMB2CreateDisposition
+import com.hierynomus.mssmb2.SMB2CreateOptions
+import com.hierynomus.mssmb2.SMB2ShareAccess
 import com.hierynomus.protocol.commons.EnumWithValue
 import com.hierynomus.smbj.SMBClient
 import com.hierynomus.smbj.auth.AuthenticationContext
@@ -12,7 +16,10 @@ import com.rapid7.client.dcerpc.mssrvs.ServerService
 import com.rapid7.client.dcerpc.transport.SMBTransportFactories
 import com.silversky.core.logger.Logger
 import com.silversky.core.smb.SmbEntry
+import com.silversky.core.smb.SmbFile
+import com.silversky.core.smb.SmbFileImpl
 import com.silversky.core.smb.SmbServer
+import java.util.EnumSet
 
 class SmbClient(
     private val logger: Logger
@@ -106,6 +113,36 @@ class SmbClient(
                     isDirectory = isDirectory(file)
                 )
             }
+    }
+
+    fun openFile(
+        shareName: String,
+        path: String
+    ): SmbFile? {
+        val session = session
+            ?: throw IllegalStateException("Not connected")
+
+        val share = session.connectShare(shareName) as DiskShare
+
+        if (!share.fileExists(path)) {
+            return null
+        }
+
+        val file = share.openFile(
+            path,
+            EnumSet.of(AccessMask.GENERIC_READ),
+            EnumSet.noneOf(FileAttributes::class.java),
+            EnumSet.of(
+                SMB2ShareAccess.FILE_SHARE_READ,
+                SMB2ShareAccess.FILE_SHARE_WRITE
+            ),
+            SMB2CreateDisposition.FILE_OPEN,
+            EnumSet.noneOf(SMB2CreateOptions::class.java)
+        )
+
+        return SmbFileImpl(
+            file
+        )
     }
 
     private fun isDirectory(

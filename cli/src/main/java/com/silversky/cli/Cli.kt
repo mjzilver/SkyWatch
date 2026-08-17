@@ -2,6 +2,7 @@ package com.silversky.cli
 
 import com.silversky.core.client.SmbClient
 import com.silversky.core.logger.Logger
+import com.silversky.core.smb.SmbFile
 import com.silversky.core.smb.SmbScanner
 import com.silversky.core.smb.SmbServer
 import com.silversky.core.utils.NetworkUtils.Companion.resolveHostName
@@ -13,6 +14,7 @@ class Cli(
     private var client: SmbClient? = null
     private var share: String? = null
     private var currentPath = ""
+    private var openedFile: SmbFile? = null
 
     fun run() {
         println("SkyWatch CLI")
@@ -38,6 +40,8 @@ class Cli(
                 "list" -> list(arguments)
                 "shares" -> listShares()
                 "use" -> useShare(arguments)
+                "open" -> open(arguments)
+                "read" -> read(arguments)
                 "disconnect" -> disconnect()
                 "help" -> help()
                 "exit", "quit" -> break
@@ -66,14 +70,14 @@ class Cli(
 
     private fun connect(arguments: String?) {
         if (arguments == null) {
-            println("Usage: /connect <server|ip> <username> <password>")
+            println("Usage: connect <server|ip> <username> <password>")
             return
         }
 
         val parts = arguments.split(" ")
 
         if (parts.size < 3) {
-            println("Usage: /connect <server|ip> <username> <password>")
+            println("Usage: connect <server|ip> <username> <password>")
             return
         }
 
@@ -161,11 +165,91 @@ class Cli(
         currentPath = ""
     }
 
+    private fun open(path: String?) {
+        if (path == null) {
+            return
+        }
+
+        val client = client ?: run {
+            println("Not connected.")
+            return
+        }
+        val share = share ?: run {
+            println("No share selected.")
+            return
+        }
+
+        openedFile?.close()
+
+        openedFile = client.openFile(share, path)
+
+        println("File $path, size ${openedFile!!.size}")
+    }
+
+    private fun read(arguments: String?) {
+        val file = openedFile ?: run {
+            println("No file opened.")
+            return
+        }
+
+        if (arguments == null) {
+            println("Usage: read <offset> <length>")
+            return
+        }
+
+        val parts = arguments.split(" ")
+
+        if (parts.size != 2) {
+            println("Usage: read <offset> <length>")
+            return
+        }
+
+        val offset = parts[0].toLongOrNull()
+        val length = parts[1].toIntOrNull()
+
+        if (offset == null || length == null || offset < 0 || length <= 0) {
+            println("Invalid offset or length.")
+            return
+        }
+
+        if (offset >= file.size) {
+            println("Offset is beyond end of file.")
+            return
+        }
+
+        val actualLength = minOf(
+            length,
+            (file.size - offset).toInt()
+        )
+
+        val buffer = ByteArray(actualLength)
+
+        try {
+            val bytesRead = file.read(
+                filePosition = offset,
+                buffer = buffer,
+                bufferOffset = 0,
+                length = actualLength
+            )
+
+            println("Read $bytesRead bytes:")
+
+            println(
+                buffer
+                    .take(bytesRead)
+                    .joinToString(" ") { "%02x".format(it) }
+            )
+        } catch (e: Exception) {
+            println("Failed to read file: ${e.message}")
+        }
+    }
+
     private fun disconnect() {
         client?.close()
         client = null
         share = null
         currentPath = ""
+        openedFile?.close()
 
         println("Disconnected.")
     }
