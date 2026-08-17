@@ -8,6 +8,8 @@ import com.hierynomus.smbj.auth.AuthenticationContext
 import com.hierynomus.smbj.connection.Connection
 import com.hierynomus.smbj.session.Session
 import com.hierynomus.smbj.share.DiskShare
+import com.rapid7.client.dcerpc.mssrvs.ServerService
+import com.rapid7.client.dcerpc.transport.SMBTransportFactories
 import com.silversky.core.logger.Logger
 import com.silversky.core.smb.SmbEntry
 import com.silversky.core.smb.SmbServer
@@ -18,7 +20,7 @@ class SmbClient(
 
     private val client = SMBClient()
 
-    private var server: SmbServer? = null
+    var server: SmbServer? = null
     private var connection: Connection? = null
     private var session: Session? = null
 
@@ -66,6 +68,18 @@ class SmbClient(
 
             throw e
         }
+    }
+
+    fun listShares(): List<String> {
+        val session = session
+            ?: throw IllegalStateException("Not connected")
+
+        val transport = SMBTransportFactories.SRVSVC.getTransport(session)
+        val serverService = ServerService(transport)
+
+        return serverService.shares0
+            .filterNotNull()
+            .map { it.netName }
     }
 
     fun list(

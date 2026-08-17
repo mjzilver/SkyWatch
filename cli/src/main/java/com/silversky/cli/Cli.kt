@@ -33,8 +33,11 @@ class Cli(
 
             when (command) {
                 "scan" -> scan()
+                "info" -> info()
                 "connect" -> connect(arguments)
                 "list" -> list(arguments)
+                "shares" -> listShares()
+                "use" -> useShare(arguments)
                 "disconnect" -> disconnect()
                 "help" -> help()
                 "exit", "quit" -> break
@@ -79,8 +82,7 @@ class Cli(
         val server = serverArg.toIntOrNull()?.let { index ->
             servers.getOrNull(index - 1)
         } ?: SmbServer(
-            ipAddress = serverArg,
-            name = resolveHostName(serverArg)
+            ipAddress = serverArg, name = resolveHostName(serverArg)
         )
 
         val username = parts[1]
@@ -91,6 +93,8 @@ class Cli(
 
         try {
             client!!.connect(server, username, password)
+
+            listShares()
 
             print("Share: ")
             share = readlnOrNull()?.trim()
@@ -123,12 +127,38 @@ class Cli(
             val entries = client.list(share, currentPath)
 
             entries.forEach {
-                val prefix = if (it.isDirectory) "DIR" else "---"
+                val prefix = if (it.isDirectory) "DIR" else "   "
                 println("$prefix ${it.name}")
             }
         } catch (e: Exception) {
             println("Failed to list directory: ${e.message}")
         }
+    }
+
+    private fun info() {
+        val client = client ?: run {
+            println("Not connected.")
+            return
+        }
+
+        println("Server: ${client.server?.name ?: "Unknown"} (${client.server?.ipAddress}:${client.server?.port})")
+        println("Share:  ${share ?: "None"}")
+        println("Path:   ${currentPath.ifEmpty { "/" }}")
+    }
+
+    private fun listShares() {
+        val client = client ?: run {
+            println("Not connected.")
+            return
+        }
+
+        println("Available shares on ${client.server?.ipAddress}")
+        client.listShares().forEach { s -> println(s) }
+    }
+
+    private fun useShare(share: String?) {
+        this.share = share
+        currentPath = ""
     }
 
     private fun disconnect() {
@@ -144,12 +174,14 @@ class Cli(
         println(
             """
             Commands:
-              /scan                  Scan network for SMB servers
-              /connect <server> ... Connect to an SMB server
-              /list [path]          List files
-              /disconnect           Disconnect
-              /help                  Show this help
-              /exit                  Exit
+              scan                                Scan network for SMB servers
+              connect <server> <user> <password>  Connect to an SMB server
+              list [path]                         List files
+              shares                              List shares
+              use <share>                         Use share folder
+              disconnect                          Disconnect
+              help                                Show this help
+              exit                                Exit
             """.trimIndent()
         )
     }
