@@ -2,13 +2,24 @@ package com.silversky.cli
 
 import com.silversky.cli.logger.ConsoleLogger
 import com.silversky.core.smb.SmbClient
+import com.silversky.core.smb.SmbScanner
 
 fun main() {
     val logger = ConsoleLogger()
-    val smb = SmbClient(logger)
+    val smbScanner = SmbScanner()
 
-    print("Enter SMB server: ")
-    val server = readln()
+    val servers = smbScanner.scanNetwork()
 
-    smb.connect(server)
+    for (server in servers) {
+        val smbClient = SmbClient(server, logger)
+
+        try {
+            smbClient.connect()
+            // Perform operations with the connected server
+        } catch (e: Exception) {
+            logger.error("Failed to connect to ${server.name} (${server.ipAddress}:${server.port}): ${e.message}")
+        } finally {
+            smbClient.disconnect()
+        }
+    }
 }
