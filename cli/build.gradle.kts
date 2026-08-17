@@ -18,6 +18,10 @@ application {
     mainClass.set("com.silversky.cli.MainKt")
 }
 
+tasks.named<JavaExec>("run") {
+    standardInput = System.`in`
+}
+
 dependencies {
     implementation(project(":core"))
 }
