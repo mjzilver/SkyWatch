@@ -1,5 +1,6 @@
 package com.silversky.core.smb
 
+import com.silversky.core.utils.NetworkUtils.Companion.resolveHostName
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.NetworkInterface
@@ -12,7 +13,6 @@ class SmbScanner(
     private val timeoutMillis: Int = 200,
     private val concurrency: Int = 64,
 ) {
-
     fun scanNetwork(): List<SmbServer> {
         val candidateIps =
             localIpv4Addresses()
@@ -47,13 +47,6 @@ class SmbScanner(
             }
         } catch (_: Exception) {
             false
-        }
-
-    private fun resolveHostName(ip: String): String? =
-        try {
-            InetAddress.getByName(ip).canonicalHostName.takeIf { it != ip }
-        } catch (_: Exception) {
-            null
         }
 
     private fun localIpv4Addresses(): List<String> =

@@ -12,85 +12,105 @@ import com.silversky.core.logger.Logger
 import com.silversky.core.smb.SmbEntry
 import com.silversky.core.smb.SmbServer
 
-class SmbClient(private val server: SmbServer, private val logger: Logger) : AutoCloseable {
-    private val client = SMBClient()
-    private var connection: Connection? = null
-    private var session: Session? = null;
+class SmbClient(
+    private val logger: Logger
+) : AutoCloseable {
 
-    fun connect(username: String, password: String, shareName: String) {
+    private val client = SMBClient()
+
+    private var server: SmbServer? = null
+    private var connection: Connection? = null
+    private var session: Session? = null
+
+    fun connect(server: SmbServer, username: String, password: String) {
         if (connection != null) {
-            logger.warn("Tried to connect to connected server ${server.name} (${server.ipAddress})")
+            logger.warn("Already connected")
             return
         }
 
-        logger.info("Connecting to ${server.name} (${server.ipAddress})")
+        logger.info(
+            "Connecting to ${server.name ?: server.ipAddress} " +
+                    "(${server.ipAddress}:${server.port})"
+        )
 
         try {
-            val conn = client.connect(server.ipAddress)
+            val conn = client.connect(server.ipAddress, server.port)
+
             val authenticationContext =
-                AuthenticationContext(username, password.toCharArray(), null)
+                AuthenticationContext(
+                    username,
+                    password.toCharArray(),
+                    null
+                )
 
-            session = conn.authenticate(authenticationContext)
+            val authenticatedSession =
+                conn.authenticate(authenticationContext)
 
-            connection = conn
+            this.server = server
+            this.connection = conn
+            this.session = authenticatedSession
+
+            logger.info(
+                "Connected to ${server.name ?: server.ipAddress} as $username"
+            )
         } catch (e: Exception) {
             logger.error(
-                "Failed to connect to share $shareName on " +
-                        "${server.name} (${server.ipAddress}): ${e.message}"
+                "Failed to connect to " +
+                        "${server.name ?: server.ipAddress}: ${e.message}"
             )
 
             connection?.close()
             connection = null
+            session = null
+            this.server = null
+
+            throw e
         }
     }
 
-    private fun isDirectory(file: FileIdBothDirectoryInformation): Boolean {
+    fun list(
+        shareName: String,
+        path: String = ""
+    ): List<SmbEntry> {
+        val session = session
+            ?: throw IllegalStateException("Not connected")
+
+        val share = session.connectShare(shareName) as DiskShare
+
+        return share.list(path)
+            .filter { it.fileName != "." && it.fileName != ".." }
+            .map { file ->
+                val filePath = if (path.isEmpty()) {
+                    file.fileName
+                } else {
+                    "$path\\${file.fileName}"
+                }
+
+                SmbEntry(
+                    name = file.fileName,
+                    path = filePath,
+                    isDirectory = isDirectory(file)
+                )
+            }
+    }
+
+    private fun isDirectory(
+        file: FileIdBothDirectoryInformation
+    ): Boolean {
         return EnumWithValue.EnumUtils.isSet(
             file.fileAttributes,
             FileAttributes.FILE_ATTRIBUTE_DIRECTORY
         )
     }
 
-    fun enumerate(shareName: String): List<SmbEntry> {
-        if (session == null) {
-            throw IllegalStateException("Not connected to ${server.name}")
-        } else {
-
-            val share = session!!.connectShare(shareName) as DiskShare
-
-            return enumerateDirectory(share, "")
-        }
-    }
-
-    private fun enumerateDirectory(share: DiskShare, path: String): List<SmbEntry> {
-        return share.list(path).filter { it.fileName != "." && it.fileName != ".." }.map { file ->
-            val isDirectory = isDirectory(file)
-
-            SmbEntry(
-                name = file.fileName,
-                isDirectory = isDirectory,
-                children =
-                    if (isDirectory) {
-                        val childPath =
-                            if (path.isEmpty()) {
-                                file.fileName
-                            } else {
-                                "$path\\${file.fileName}"
-                            }
-
-                        enumerateDirectory(share, childPath)
-                    } else {
-                        emptyList()
-                    }
-            )
-        }
-    }
-
     fun disconnect() {
         connection?.close()
-        connection = null
 
-        logger.debug("Disconnected from ${server.name}")
+        connection = null
+        session = null
+        server = null
+
+        logger.debug("Disconnected")
     }
 
     override fun close() {
