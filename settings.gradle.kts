@@ -24,3 +24,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "SkyWatch"
 include(":app")
+include(":core")
+include(":cli")
