@@ -7,41 +7,32 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import com.silversky.core.client.SmbClient
 
 fun createSmbPlayer(
-    context: Context,
-    smbClient: SmbClient,
-    shareName: String,
-    path: String
+    context: Context, smbClient: SmbClient, shareName: String, path: String
 ): ExoPlayer {
 
-    val dataSourceFactory =
-        SmbDataSourceFactory(smbClient)
+    val dataSourceFactory = SmbDataSourceFactory(smbClient)
 
     val uri = buildSmbUri(
-        shareName = shareName,
-        path = path
+        shareName = shareName, path = path
     )
 
-    val mediaSource =
-        ProgressiveMediaSource.Factory(
-            dataSourceFactory
-        ).createMediaSource(
-            MediaItem.fromUri(uri)
-        )
+    val mediaSource = ProgressiveMediaSource.Factory(
+        dataSourceFactory
+    ).createMediaSource(
+        MediaItem.fromUri(uri)
+    )
 
-    return ExoPlayer.Builder(context)
-        .build()
-        .apply {
-            setMediaSource(mediaSource)
-            prepare()
-            playWhenReady = true
-        }
+    return ExoPlayer.Builder(context).build().apply {
+        setMediaSource(mediaSource)
+        prepare()
+        playWhenReady = true
+    }
 }
 
 private fun buildSmbUri(
-    shareName: String,
-    path: String
+    shareName: String, path: String
 ): String {
-    return "smb://$shareName/${path
-        .replace('\\', '/')
-        .trimStart('/')}"
+    return "smb://$shareName/${
+        path.replace('\\', '/').trimStart('/')
+    }"
 }

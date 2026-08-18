@@ -31,17 +31,13 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 
 data class ServerConnectionInput(
-    val name: String?,
-    val address: String,
-    val username: String,
-    val password: String
+    val name: String?, val address: String, val username: String, val password: String
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ServerDialog(
-    onDismiss: () -> Unit,
-    onConnect: (ServerConnectionInput) -> Unit
+    onDismiss: () -> Unit, onConnect: (ServerConnectionInput) -> Unit, onScan: () -> Unit
 ) {
     var name by remember {
         mutableStateOf("")
@@ -89,8 +85,7 @@ fun ServerDialog(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Add SMB Server",
-                style = MaterialTheme.typography.headlineSmall
+                text = "Add SMB Server", style = MaterialTheme.typography.headlineSmall
             )
 
             Spacer(
@@ -176,9 +171,18 @@ fun ServerDialog(
 
                             else -> false
                         }
-                    }
-            ) {
+                    }) {
                 Text("Connect")
+            }
+
+            Spacer(
+                modifier = Modifier.height(8.dp)
+            )
+
+            Button(
+                onClick = onScan, modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Scan Network")
             }
         }
     }
@@ -197,8 +201,7 @@ private fun TvTextField(
         modifier = Modifier.fillMaxWidth()
     ) {
         Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge
+            text = label, style = MaterialTheme.typography.labelLarge
         )
 
         Spacer(
@@ -241,13 +244,10 @@ private fun TvTextField(
                     MaterialTheme.colorScheme.surface
                 )
                 .border(
-                    width = 2.dp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    width = 2.dp, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 .padding(
-                    horizontal = 16.dp,
-                    vertical = 14.dp
-                )
-        )
+                    horizontal = 16.dp, vertical = 14.dp
+                ))
     }
 }

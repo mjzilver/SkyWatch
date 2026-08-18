@@ -17,7 +17,6 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import com.silversky.core.smb.SmbServer
 import com.silversky.skywatch.model.SavedServer
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -27,46 +26,45 @@ fun HomeScreen(
     error: String?,
     onServerClick: (SavedServer) -> Unit,
     onEditServer: (SavedServer) -> Unit,
-    onAddServer: () -> Unit
+    onAddServer: () -> Unit,
+    onDeleteServer: (SavedServer) -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(
-                horizontal = 72.dp,
-                vertical = 48.dp
-            ),
-        verticalArrangement = Arrangement.spacedBy(32.dp)
+                horizontal = 72.dp, vertical = 48.dp
+            ), verticalArrangement = Arrangement.spacedBy(32.dp)
     ) {
+        // Header
         Column {
             Text(
-                text = "SKYWATCH",
-                style = MaterialTheme.typography.headlineLarge
+                text = "SKYWATCH", style = MaterialTheme.typography.headlineLarge
             )
 
             Text(
-                text = "SMB MEDIA PLAYER",
-                style = MaterialTheme.typography.bodyLarge
+                text = "SMB MEDIA PLAYER", style = MaterialTheme.typography.bodyLarge
             )
         }
 
+        // Add button
         Button(
             onClick = onAddServer
         ) {
             Text("Add Server")
         }
 
+        // Error
         error?.let {
             Text(
-                text = it,
-                style = MaterialTheme.typography.bodyLarge
+                text = it, style = MaterialTheme.typography.bodyLarge
             )
         }
 
+        // Saved servers
         Column {
             Text(
-                text = "Saved Servers",
-                style = MaterialTheme.typography.titleLarge
+                text = "Saved Servers", style = MaterialTheme.typography.titleLarge
             )
 
             Spacer(
@@ -79,43 +77,45 @@ fun HomeScreen(
                 )
             } else {
                 Column(
-                    verticalArrangement =
-                        Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     savedServers.forEach { server ->
-                        Button(
-                            onClick = {
-                                onServerClick(server)
-                            },
-                            modifier = Modifier.fillMaxWidth()
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement =
-                                    Arrangement.SpaceBetween,
-                                verticalAlignment =
-                                    Alignment.CenterVertically
+                            Button(
+                                onClick = {
+                                    onServerClick(server)
+                                }, modifier = Modifier.weight(1f)
                             ) {
                                 Column {
                                     Text(
-                                        server.server.name
-                                            ?: server.server.ipAddress
+                                        server.server.name ?: server.server.ipAddress
                                     )
+
                                     Text(
                                         server.server.ipAddress,
                                         style = MaterialTheme.typography.bodySmall
                                     )
                                 }
-                                
-                                // Edit button for saved servers
-                                Button(
-                                    onClick = { 
-                                        onEditServer(server) 
-                                    },
-                                    modifier = Modifier.width(80.dp)
-                                ) {
-                                    Text("Edit")
-                                }
+                            }
+
+                            Button(
+                                onClick = {
+                                    onEditServer(server)
+                                }, modifier = Modifier.width(80.dp)
+                            ) {
+                                Text("Edit")
+                            }
+
+                            Button(
+                                onClick = {
+                                    onDeleteServer(server)
+                                }, modifier = Modifier.width(80.dp)
+                            ) {
+                                Text("Delete")
                             }
                         }
                     }

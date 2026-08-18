@@ -33,8 +33,7 @@ fun LoadingMessage(
     message: String = "Loading..."
 ) {
     Text(
-        text = message,
-        style = MaterialTheme.typography.bodyLarge
+        text = message, style = MaterialTheme.typography.bodyLarge
     )
 }
 
@@ -44,21 +43,17 @@ fun ErrorMessage(
     message: String
 ) {
     Text(
-        text = message,
-        style = MaterialTheme.typography.bodyLarge
+        text = message, style = MaterialTheme.typography.bodyLarge
     )
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ScreenHeader(
-    title: String,
-    subtitle: String? = null,
-    onBack: (() -> Unit)? = null
+    title: String, subtitle: String? = null, onBack: (() -> Unit)? = null
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically
     ) {
         if (onBack != null) {
             BackButton(onClick = onBack)
@@ -70,8 +65,7 @@ fun ScreenHeader(
 
         Column {
             Text(
-                text = title,
-                style = MaterialTheme.typography.headlineMedium
+                text = title, style = MaterialTheme.typography.headlineMedium
             )
 
             if (subtitle != null) {
@@ -80,8 +74,7 @@ fun ScreenHeader(
                 )
 
                 Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium
+                    text = subtitle, style = MaterialTheme.typography.bodyMedium
                 )
             }
         }
@@ -94,12 +87,10 @@ fun EmptyMessage(
     message: String
 ) {
     Column(
-        modifier = Modifier.padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
-            text = message,
-            style = MaterialTheme.typography.bodyLarge
+            text = message, style = MaterialTheme.typography.bodyLarge
         )
     }
 }

@@ -22,21 +22,17 @@ class SmbDataSource(
 
         currentUri = dataSpec.uri
 
-        val shareName = dataSpec.uri.host
-            ?: throw IllegalArgumentException(
-                "SMB URI has no share name"
-            )
+        val shareName = dataSpec.uri.host ?: throw IllegalArgumentException(
+            "SMB URI has no share name"
+        )
 
-        val path = dataSpec.uri.path
-            ?.trimStart('/')
-            ?.replace('/', '\\')
-            ?: throw IllegalArgumentException(
+        val path =
+            dataSpec.uri.path?.trimStart('/')?.replace('/', '\\') ?: throw IllegalArgumentException(
                 "SMB URI has no path"
             )
 
         val openedFile = smbClient.openFile(
-            shareName = shareName,
-            path = path
+            shareName = shareName, path = path
         ) ?: throw IllegalStateException(
             "File does not exist: $shareName/$path"
         )
@@ -45,12 +41,11 @@ class SmbDataSource(
 
         position = dataSpec.position
 
-        remaining =
-            if (dataSpec.length == C.LENGTH_UNSET.toLong()) {
-                openedFile.size - position
-            } else {
-                dataSpec.length
-            }
+        remaining = if (dataSpec.length == C.LENGTH_UNSET.toLong()) {
+            openedFile.size - position
+        } else {
+            dataSpec.length
+        }
 
         transferStarted(dataSpec)
 
@@ -58,9 +53,7 @@ class SmbDataSource(
     }
 
     override fun read(
-        buffer: ByteArray,
-        offset: Int,
-        length: Int
+        buffer: ByteArray, offset: Int, length: Int
     ): Int {
         if (length == 0) {
             return 0
@@ -71,15 +64,11 @@ class SmbDataSource(
         }
 
         val requested = minOf(
-            length.toLong(),
-            remaining
+            length.toLong(), remaining
         ).toInt()
 
         val bytesRead = file?.read(
-            filePosition = position,
-            buffer = buffer,
-            bufferOffset = offset,
-            length = requested
+            filePosition = position, buffer = buffer, bufferOffset = offset, length = requested
         ) ?: throw IllegalStateException(
             "SMB file is not open"
         )

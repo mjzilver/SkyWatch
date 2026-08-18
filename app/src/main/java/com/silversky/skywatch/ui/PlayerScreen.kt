@@ -17,27 +17,19 @@ import com.silversky.skywatch.media.createSmbPlayer
 
 @Composable
 fun PlayerScreen(
-    client: SmbClient,
-    shareName: String,
-    file: SmbEntry,
-    logger: Logger,
-    onBack: () -> Unit
+    client: SmbClient, shareName: String, file: SmbEntry, logger: Logger, onBack: () -> Unit
 ) {
     val context = LocalContext.current
 
     val player = remember(
-        shareName,
-        file.path
+        shareName, file.path
     ) {
         logger.info(
             "Starting playback: //$shareName/${file.path}"
         )
 
         createSmbPlayer(
-            context = context,
-            smbClient = client,
-            shareName = shareName,
-            path = file.path
+            context = context, smbClient = client, shareName = shareName, path = file.path
         )
     }
 
@@ -56,28 +48,24 @@ fun PlayerScreen(
         }
     }
 
-    AndroidView(
-        modifier = Modifier.fillMaxSize(),
-        factory = { context ->
-            PlayerView(context).apply {
-                this.player = player
+    AndroidView(modifier = Modifier.fillMaxSize(), factory = { context ->
+        PlayerView(context).apply {
+            this.player = player
 
-                useController = true
+            useController = true
 
-                controllerShowTimeoutMs = 3_000
+            controllerShowTimeoutMs = 3_000
 
-                setShowBuffering(
-                    PlayerView.SHOW_BUFFERING_WHEN_PLAYING
-                )
+            setShowBuffering(
+                PlayerView.SHOW_BUFFERING_WHEN_PLAYING
+            )
 
-                keepScreenOn = true
+            keepScreenOn = true
 
-                focusable = View.FOCUSABLE
-                isFocusableInTouchMode = true
-            }
-        },
-        update = { view ->
-            view.player = player
+            focusable = View.FOCUSABLE
+            isFocusableInTouchMode = true
         }
-    )
+    }, update = { view ->
+        view.player = player
+    })
 }

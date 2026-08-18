@@ -21,6 +21,8 @@ import androidx.tv.material3.Text
 import com.silversky.core.client.SmbClient
 import com.silversky.core.logger.Logger
 import com.silversky.core.smb.SmbServer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -49,19 +51,19 @@ fun ShareScreen(
                 "Loading shares from ${server.ipAddress}"
             )
 
-            shares = client.listShares()
+            shares = withContext(Dispatchers.IO) {
+                client.listShares()
+            }
 
             logger.info(
                 "Found ${shares.size} shares"
             )
         } catch (e: Exception) {
             logger.error(
-                "Failed to list SMB shares",
-                e
+                "Failed to list SMB shares", e
             )
 
-            error =
-                e.message ?: "Failed to load shares"
+            error = e.message ?: "Failed to load shares"
         } finally {
             loading = false
         }
@@ -73,10 +75,7 @@ fun ShareScreen(
             .padding(48.dp)
     ) {
         ScreenHeader(
-            title = server.name
-                ?: server.ipAddress,
-            subtitle = "Select a share",
-            onBack = onBack
+            title = server.name ?: server.ipAddress, subtitle = "Select a share", onBack = onBack
         )
 
         Spacer(
@@ -102,8 +101,7 @@ fun ShareScreen(
 
             else -> {
                 Column(
-                    verticalArrangement =
-                        Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     shares.forEach { share ->
 
@@ -114,8 +112,7 @@ fun ShareScreen(
                                 )
 
                                 onShareSelected(share)
-                            },
-                            modifier = Modifier.fillMaxWidth()
+                            }, modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("📁  $share")
                         }

@@ -25,6 +25,8 @@ import com.silversky.core.client.SmbClient
 import com.silversky.core.logger.Logger
 import com.silversky.core.smb.SmbEntry
 import com.silversky.core.smb.SmbServer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -66,8 +68,7 @@ fun FileBrowserScreen(
     }
 
     LaunchedEffect(
-        shareName,
-        currentPath
+        shareName, currentPath
     ) {
         loading = true
         error = null
@@ -77,24 +78,23 @@ fun FileBrowserScreen(
                 "Listing //$shareName/$currentPath"
             )
 
-            entries = client.list(
-                shareName = shareName,
-                path = currentPath
-            )
+            withContext(Dispatchers.IO) {
+                entries = client.list(
+                    shareName = shareName, path = currentPath
+                )
+            }
 
             logger.debug(
                 "Found ${entries.size} entries"
             )
         } catch (e: Exception) {
             logger.error(
-                "Failed to list //$shareName/$currentPath",
-                e
+                "Failed to list //$shareName/$currentPath", e
             )
 
             entries = emptyList()
 
-            error =
-                e.message ?: "Failed to load directory"
+            error = e.message ?: "Failed to load directory"
         } finally {
             loading = false
         }
@@ -106,13 +106,11 @@ fun FileBrowserScreen(
             .padding(48.dp)
     ) {
         ScreenHeader(
-            title = shareName,
-            subtitle = if (currentPath.isEmpty()) {
+            title = shareName, subtitle = if (currentPath.isEmpty()) {
                 "/"
             } else {
                 "/$currentPath"
-            },
-            onBack = ::goBackDirectory
+            }, onBack = ::goBackDirectory
         )
 
         Spacer(
@@ -136,22 +134,18 @@ fun FileBrowserScreen(
 
             else -> {
                 Column(
-                    verticalArrangement =
-                        Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     entries.forEach { entry ->
 
                         FileEntryButton(
-                            entry = entry,
-                            onClick = {
+                            entry = entry, onClick = {
                                 if (entry.isDirectory) {
-                                    currentPath =
-                                        entry.path
+                                    currentPath = entry.path
                                 } else {
                                     onFileSelected(entry)
                                 }
-                            }
-                        )
+                            })
                     }
                 }
             }
@@ -162,19 +156,15 @@ fun FileBrowserScreen(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun FileEntryButton(
-    entry: SmbEntry,
-    onClick: () -> Unit
+    entry: SmbEntry, onClick: () -> Unit
 ) {
     Button(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
+        onClick = onClick, modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement =
-                Arrangement.SpaceBetween,
-            verticalAlignment =
-                Alignment.CenterVertically
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = if (entry.isDirectory) {
@@ -190,18 +180,15 @@ private fun FileEntryButton(
 private fun parentPath(
     path: String
 ): String {
-    val normalized =
-        path.trimEnd('\\')
+    val normalized = path.trimEnd('\\')
 
-    val index =
-        normalized.lastIndexOf('\\')
+    val index = normalized.lastIndexOf('\\')
 
     return if (index < 0) {
         ""
     } else {
         normalized.substring(
-            0,
-            index
+            0, index
         )
     }
 }
