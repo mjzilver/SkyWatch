@@ -122,7 +122,7 @@ fun ServerDialog(
           label = "Password",
           focusRequester = passwordFocus,
           upFocus = usernameFocus,
-          downFocus = scanFocus,
+          downFocus = connectFocus,
       )
 
       Spacer(modifier = Modifier.height(8.dp))

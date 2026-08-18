@@ -11,7 +11,6 @@ import java.io.File
 class ServerPersistenceManager(private val context: Context) {
   private val gson = Gson()
   private val fileName = "saved_servers.json"
-
   private var serverCache: MutableList<SavedServer>? = null
 
   fun getServers(): List<SavedServer> {

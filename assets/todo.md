@@ -8,4 +8,5 @@
 - [x] Remember last position for movie
 - [ ] Chapters in player
 - [ ] Show movie duration in file view
-- [ ] Error popup 
+- [ ] Error popup in player (Codec missing etc)
+- [ ] Guest account login

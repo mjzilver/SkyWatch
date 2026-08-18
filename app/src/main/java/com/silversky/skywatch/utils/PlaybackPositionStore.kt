@@ -43,18 +43,6 @@ class PlaybackPositionStore(private val context: Context) {
     }
   }
 
-  suspend fun clearPosition(
-      ip: String,
-      share: String,
-      path: String,
-  ) {
-    val key = longPreferencesKey(key(ip, share, path))
-
-    context.playbackDataStore.edit { preferences ->
-      preferences.remove(key)
-    }
-  }
-
   private fun key(
       ip: String,
       share: String,
