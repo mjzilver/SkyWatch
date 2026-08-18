@@ -15,7 +15,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.tv.material3.Button
@@ -52,6 +59,26 @@ fun ServerDialog(
         mutableStateOf("")
     }
 
+    val nameFocus = remember {
+        FocusRequester()
+    }
+
+    val addressFocus = remember {
+        FocusRequester()
+    }
+
+    val usernameFocus = remember {
+        FocusRequester()
+    }
+
+    val passwordFocus = remember {
+        FocusRequester()
+    }
+
+    val connectFocus = remember {
+        FocusRequester()
+    }
+
     Dialog(
         onDismissRequest = onDismiss
     ) {
@@ -75,7 +102,10 @@ fun ServerDialog(
                 onValueChange = {
                     name = it
                 },
-                label = "Name"
+                label = "Name",
+                focusRequester = nameFocus,
+                upFocus = null,
+                downFocus = addressFocus
             )
 
             TvTextField(
@@ -83,7 +113,10 @@ fun ServerDialog(
                 onValueChange = {
                     address = it
                 },
-                label = "IP address"
+                label = "IP address",
+                focusRequester = addressFocus,
+                upFocus = nameFocus,
+                downFocus = usernameFocus
             )
 
             TvTextField(
@@ -91,7 +124,10 @@ fun ServerDialog(
                 onValueChange = {
                     username = it
                 },
-                label = "Username"
+                label = "Username",
+                focusRequester = usernameFocus,
+                upFocus = addressFocus,
+                downFocus = passwordFocus
             )
 
             TvTextField(
@@ -99,7 +135,10 @@ fun ServerDialog(
                 onValueChange = {
                     password = it
                 },
-                label = "Password"
+                label = "Password",
+                focusRequester = passwordFocus,
+                upFocus = usernameFocus,
+                downFocus = connectFocus
             )
 
             Spacer(
@@ -121,7 +160,23 @@ fun ServerDialog(
                         )
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(connectFocus)
+                    .onPreviewKeyEvent { event ->
+                        if (event.type != KeyEventType.KeyDown) {
+                            return@onPreviewKeyEvent false
+                        }
+
+                        when (event.key) {
+                            Key.DirectionUp -> {
+                                passwordFocus.requestFocus()
+                                true
+                            }
+
+                            else -> false
+                        }
+                    }
             ) {
                 Text("Connect")
             }
@@ -129,12 +184,14 @@ fun ServerDialog(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun TvTextField(
     value: String,
     onValueChange: (String) -> Unit,
-    label: String
+    label: String,
+    focusRequester: FocusRequester,
+    upFocus: FocusRequester?,
+    downFocus: FocusRequester?
 ) {
     Column(
         modifier = Modifier.fillMaxWidth()
@@ -160,6 +217,26 @@ private fun TvTextField(
             ),
             modifier = Modifier
                 .fillMaxWidth()
+                .focusRequester(focusRequester)
+                .onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) {
+                        return@onPreviewKeyEvent false
+                    }
+
+                    when (event.key) {
+                        Key.DirectionUp -> {
+                            upFocus?.requestFocus() ?: return@onPreviewKeyEvent false
+                            true
+                        }
+
+                        Key.DirectionDown -> {
+                            downFocus?.requestFocus() ?: return@onPreviewKeyEvent false
+                            true
+                        }
+
+                        else -> false
+                    }
+                }
                 .background(
                     MaterialTheme.colorScheme.surface
                 )

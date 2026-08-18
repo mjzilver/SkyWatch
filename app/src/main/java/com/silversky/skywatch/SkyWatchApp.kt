@@ -15,7 +15,6 @@ import com.silversky.core.smb.SmbServer
 import com.silversky.skywatch.model.SavedServer
 import com.silversky.skywatch.ui.FileBrowserScreen
 import com.silversky.skywatch.ui.HomeScreen
-import com.silversky.skywatch.ui.HomeViewModel
 import com.silversky.skywatch.ui.PlayerScreen
 import com.silversky.skywatch.ui.ServerConnectionInput
 import com.silversky.skywatch.ui.ServerDialog
@@ -102,7 +101,6 @@ fun SkyWatchApp(
                 username = input.username,
                 password = input.password
             )
-
 
             showServerDialog = false
             screen = Screen.SHARES
