@@ -16,17 +16,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.tv.material3.Button
+import androidx.tv.material3.Checkbox
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -36,6 +30,7 @@ data class ServerConnectionInput(
     val address: String,
     val username: String,
     val password: String,
+    val isGuest: Boolean,
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -48,6 +43,7 @@ fun ServerDialog(
     initialName: String = "",
     initialUsername: String = "",
     initialPassword: String = "",
+    initialIsGuest: Boolean = false,
     isEditing: Boolean = false,
 ) {
   var name by
@@ -70,12 +66,9 @@ fun ServerDialog(
         mutableStateOf(initialPassword)
       }
 
-  val nameFocus = remember { FocusRequester() }
-  val addressFocus = remember { FocusRequester() }
-  val usernameFocus = remember { FocusRequester() }
-  val passwordFocus = remember { FocusRequester() }
-  val scanFocus = remember { FocusRequester() }
-  val connectFocus = remember { FocusRequester() }
+  var useGuestAccount by remember {
+    mutableStateOf(initialIsGuest)
+  }
 
   Dialog(onDismissRequest = onDismiss) {
     Column(
@@ -93,36 +86,44 @@ fun ServerDialog(
           value = name,
           onValueChange = { name = it },
           label = "Name",
-          focusRequester = nameFocus,
-          upFocus = null,
-          downFocus = addressFocus,
       )
 
       TvTextField(
           value = address,
           onValueChange = { address = it },
           label = "IP address",
-          focusRequester = addressFocus,
-          upFocus = nameFocus,
-          downFocus = usernameFocus,
       )
+
+      Button(
+          onClick = {
+            useGuestAccount = !useGuestAccount
+          },
+          modifier = Modifier.fillMaxWidth(),
+      ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+          Checkbox(
+              checked = useGuestAccount,
+              onCheckedChange = null,
+          )
+
+          Text("Use guest account")
+        }
+      }
 
       TvTextField(
           value = username,
           onValueChange = { username = it },
           label = "Username",
-          focusRequester = usernameFocus,
-          upFocus = addressFocus,
-          downFocus = passwordFocus,
+          enabled = !useGuestAccount,
       )
 
       TvTextField(
           value = password,
           onValueChange = { password = it },
           label = "Password",
-          focusRequester = passwordFocus,
-          upFocus = usernameFocus,
-          downFocus = connectFocus,
+          enabled = !useGuestAccount,
       )
 
       Spacer(modifier = Modifier.height(8.dp))
@@ -133,63 +134,26 @@ fun ServerDialog(
       ) {
         Button(
             onClick = {
-              if (address.isNotBlank()) {
+              if (name.isNotBlank() && address.isNotBlank()) {
                 onConnect(
                     ServerConnectionInput(
-                        name = name.ifBlank { null },
+                        name = name.trim(),
                         address = address.trim(),
                         username = username,
                         password = password,
+                        isGuest = useGuestAccount,
                     )
                 )
               }
             },
-            modifier =
-                Modifier.weight(1f).focusRequester(connectFocus).onPreviewKeyEvent { event ->
-                  if (event.type != KeyEventType.KeyDown) {
-                    return@onPreviewKeyEvent false
-                  }
-
-                  when (event.key) {
-                    Key.DirectionUp -> {
-                      passwordFocus.requestFocus()
-                      true
-                    }
-
-                    Key.DirectionLeft -> {
-                      scanFocus.requestFocus()
-                      true
-                    }
-
-                    else -> false
-                  }
-                },
+            modifier = Modifier.weight(1f),
         ) {
           Text(if (isEditing) "Save" else "Connect")
         }
 
         Button(
             onClick = onScan,
-            modifier =
-                Modifier.weight(1f).focusRequester(scanFocus).onPreviewKeyEvent { event ->
-                  if (event.type != KeyEventType.KeyDown) {
-                    return@onPreviewKeyEvent false
-                  }
-
-                  when (event.key) {
-                    Key.DirectionUp -> {
-                      passwordFocus.requestFocus()
-                      true
-                    }
-
-                    Key.DirectionRight -> {
-                      connectFocus.requestFocus()
-                      true
-                    }
-
-                    else -> false
-                  }
-                },
+            modifier = Modifier.weight(1f),
         ) {
           Text("Scan Network")
         }
@@ -203,57 +167,54 @@ private fun TvTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    focusRequester: FocusRequester,
-    upFocus: FocusRequester?,
-    downFocus: FocusRequester?,
+    enabled: Boolean = true,
 ) {
-  Column(modifier = Modifier.fillMaxWidth()) {
+  Column(
+      modifier = Modifier.fillMaxWidth(),
+  ) {
     Text(
         text = label,
         style = MaterialTheme.typography.labelLarge,
     )
 
-    Spacer(modifier = Modifier.height(6.dp))
+    Spacer(modifier = Modifier.height(4.dp))
 
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
+        enabled = enabled,
         singleLine = true,
         textStyle =
-            MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+            MaterialTheme.typography.bodyLarge.copy(
+                color =
+                    if (enabled) {
+                      MaterialTheme.colorScheme.onSurface
+                    } else {
+                      MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    },
+            ),
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         modifier =
             Modifier.fillMaxWidth()
-                .focusRequester(focusRequester)
-                .onPreviewKeyEvent { event ->
-                  if (event.type != KeyEventType.KeyDown) {
-                    return@onPreviewKeyEvent false
-                  }
-
-                  when (event.key) {
-                    Key.DirectionUp -> {
-                      upFocus?.requestFocus() ?: return@onPreviewKeyEvent false
-
-                      true
-                    }
-
-                    Key.DirectionDown -> {
-                      downFocus?.requestFocus() ?: return@onPreviewKeyEvent false
-
-                      true
-                    }
-
-                    else -> false
-                  }
-                }
-                .background(MaterialTheme.colorScheme.surface)
+                .background(
+                    if (enabled) {
+                      MaterialTheme.colorScheme.surface
+                    } else {
+                      MaterialTheme.colorScheme.surface.copy(alpha = 0.38f)
+                    },
+                )
                 .border(
                     width = 2.dp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color =
+                        if (enabled) {
+                          MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                          MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                        },
                 )
                 .padding(
-                    horizontal = 16.dp,
-                    vertical = 14.dp,
+                    horizontal = 14.dp,
+                    vertical = 12.dp,
                 ),
     )
   }

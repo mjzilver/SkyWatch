@@ -9,4 +9,4 @@
 - [ ] Chapters in player
 - [ ] Show movie duration in file view
 - [ ] Error popup in player (Codec missing etc)
-- [ ] Guest account login
+- [x] Guest account login

@@ -138,6 +138,7 @@ fun SkyWatchApp(
             server = server,
             username = input.username,
             password = input.password,
+            isGuest = input.isGuest
         )
 
         val saved =
@@ -145,6 +146,7 @@ fun SkyWatchApp(
                 server = server,
                 username = input.username,
                 password = input.password,
+                isGuest = input.isGuest
             )
 
         val existingServers = persistenceManager.getServers()
@@ -193,6 +195,7 @@ fun SkyWatchApp(
             address = savedServer.server.ipAddress,
             username = savedServer.username,
             password = savedServer.password,
+            isGuest = savedServer.isGuest
         )
     )
   }
@@ -219,14 +222,7 @@ fun SkyWatchApp(
           logger.info("Found server ${server.name} " + "with ip ${server.ipAddress}")
         }
 
-        val savedServers = persistenceManager.getServers().map { it.server }
-        val savedIps = savedServers.map { it.ipAddress }.toSet()
-        val newServers =
-            discoveredServers.distinctBy { it.ipAddress }.filter { it.ipAddress !in savedIps }
-
-        logger.info("Found ${newServers.size} new SMB servers")
-
-        val results = newServers.map { server ->
+        val results = discoveredServers.map { server ->
           ScanResult(
               ip = server.ipAddress,
               name = server.name ?: server.ipAddress,
@@ -270,6 +266,7 @@ fun SkyWatchApp(
                 server = server,
                 username = input.username,
                 password = input.password,
+                isGuest = input.isGuest
             ),
             oldServer,
         )
@@ -465,6 +462,7 @@ fun SkyWatchApp(
         initialName = server?.server?.name ?: scannedName,
         initialUsername = server?.username ?: "",
         initialPassword = server?.password ?: "",
+        initialIsGuest = server?.isGuest ?: false,
         isEditing = server != null,
     )
   }

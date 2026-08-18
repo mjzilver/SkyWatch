@@ -37,6 +37,7 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
       server: SmbServer,
       username: String,
       password: String,
+      isGuest: Boolean = false
   ) {
     synchronized(connectionLock) {
       if (connection != null && session != null) {
@@ -59,11 +60,14 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
             )
 
         val authenticationContext =
-            AuthenticationContext(
-                username,
-                password.toCharArray(),
-                null,
-            )
+            if (isGuest || username == "Everyone") {
+              AuthenticationContext.guest()
+            } else
+                AuthenticationContext(
+                    username,
+                    password.toCharArray(),
+                    null,
+                )
 
         val newSession = newConnection.authenticate(authenticationContext)
 
