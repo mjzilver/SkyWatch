@@ -38,60 +38,59 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
       username: String,
       password: String,
   ) {
-      synchronized(connectionLock) {
-          if (connection != null && session != null) {
-              logger.warn("Already connected")
-              return
-          }
-
-          logger.info(
-              "Connecting to ${server.name ?: server.ipAddress} " +
-                      "(${server.ipAddress}:${server.port})"
-          )
-
-          var newConnection: Connection? = null
-
-          try {
-              newConnection =
-                  client.connect(
-                      server.ipAddress,
-                      server.port,
-                  )
-
-              val authenticationContext =
-                  AuthenticationContext(
-                      username,
-                      password.toCharArray(),
-                      null,
-                  )
-
-              val newSession = newConnection.authenticate(authenticationContext)
-
-              this.server = server
-              this.username = username
-              this.password = password
-              this.connection = newConnection
-              this.session = newSession
-
-              if (server.name == null) {
-                  server.name = newConnection.connectionContext.server.serverName
-              }
-
-              logger.info("Connected to ${server.name ?: server.ipAddress} as $username")
-          } catch (e: Exception) {
-              try {
-                  newConnection?.close()
-              } catch (_: Exception) {
-              }
-
-              this.connection = null
-              this.session = null
-
-              logger.error("Failed to connect to " + "${server.name ?: server.ipAddress}: ${e.message}")
-
-              throw e
-          }
+    synchronized(connectionLock) {
+      if (connection != null && session != null) {
+        logger.warn("Already connected")
+        return
       }
+
+      logger.info(
+          "Connecting to ${server.name ?: server.ipAddress} " +
+              "(${server.ipAddress}:${server.port})"
+      )
+
+      var newConnection: Connection? = null
+
+      try {
+        newConnection =
+            client.connect(
+                server.ipAddress,
+                server.port,
+            )
+
+        val authenticationContext =
+            AuthenticationContext(
+                username,
+                password.toCharArray(),
+                null,
+            )
+
+        val newSession = newConnection.authenticate(authenticationContext)
+
+        this.server = server
+        this.username = username
+        this.password = password
+        this.connection = newConnection
+        this.session = newSession
+
+        if (server.name == null) {
+          server.name = newConnection.connectionContext.server.serverName
+        }
+
+        logger.info("Connected to ${server.name ?: server.ipAddress} as $username")
+      } catch (e: Exception) {
+        try {
+          newConnection?.close()
+        } catch (_: Exception) {}
+
+        this.connection = null
+        this.session = null
+
+        logger.error("Failed to connect to " + "${server.name ?: server.ipAddress}: ${e.message}")
+
+        throw e
+      }
+    }
   }
 
   fun listShares(): List<String> {

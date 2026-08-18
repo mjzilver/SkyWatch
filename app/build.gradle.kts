@@ -35,6 +35,7 @@ dependencies {
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.tv.foundation)
   implementation(libs.androidx.tv.material)
+  implementation("androidx.compose.material:material-icons-extended")
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   debugImplementation(libs.androidx.compose.ui.tooling)
   implementation(project(":core"))

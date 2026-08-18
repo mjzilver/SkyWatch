@@ -6,6 +6,7 @@ import com.silversky.core.smb.SmbFile
 import com.silversky.core.smb.SmbScanner
 import com.silversky.core.smb.SmbServer
 import com.silversky.core.utils.NetworkUtils.Companion.resolveHostName
+import java.io.FileOutputStream
 
 class Cli(private val logger: Logger) {
   private var servers = emptyList<SmbServer>()
@@ -34,11 +35,14 @@ class Cli(private val logger: Logger) {
       when (command) {
         "scan" -> scan()
         "info" -> info()
+        "cd" -> cd(arguments)
         "connect" -> connect(arguments)
+        "ls",
         "list" -> list(arguments)
         "shares" -> listShares()
         "use" -> useShare(arguments)
         "open" -> open(arguments)
+        "download" -> download(arguments)
         "read" -> read(arguments)
         "disconnect" -> disconnect()
         "help" -> help()
@@ -111,6 +115,59 @@ class Cli(private val logger: Logger) {
     } catch (e: Exception) {
       println("Connection failed: ${e.message}")
       client = null
+    }
+  }
+
+  private fun cd(path: String?) {
+    val client =
+        client
+            ?: run {
+              println("Not connected.")
+              return
+            }
+
+    val share =
+        share
+            ?: run {
+              println("No share selected.")
+              return
+            }
+
+    if (path == null) {
+      println("Usage: cd <path>")
+      return
+    }
+
+    val newPath =
+        when {
+          path == ".." -> {
+            currentPath.trimEnd('/').substringBeforeLast('/', "")
+          }
+
+          path.startsWith("/") -> {
+            path.trim('/')
+          }
+
+          currentPath.isEmpty() -> {
+            path.trim('/')
+          }
+
+          else -> {
+            "${currentPath.trimEnd('/')}/${path.trim('/')}"
+          }
+        }
+
+    try {
+      val entries = client.list(share, newPath)
+
+      currentPath = newPath
+
+      entries.forEach {
+        val prefix = if (it.isDirectory) "DIR" else "   "
+        println("$prefix ${it.name}")
+      }
+    } catch (e: Exception) {
+      println("Failed to enter directory: ${e.message}")
     }
   }
 
@@ -197,11 +254,20 @@ class Cli(private val logger: Logger) {
               return
             }
 
+    val fullPath =
+        if (path.startsWith("/")) {
+          path.trim('/')
+        } else if (currentPath.isEmpty()) {
+          path
+        } else {
+          "${currentPath.trimEnd('/')}/${path.trimStart('/')}"
+        }
+
     try {
       openedFile?.close()
-      openedFile = client.openFile(share, path)
+      openedFile = client.openFile(share, fullPath)
 
-      println("File: $path")
+      println("File: $fullPath")
       println("Size: ${openedFile!!.size} bytes")
     } catch (e: Exception) {
       openedFile = null
@@ -264,6 +330,59 @@ class Cli(private val logger: Logger) {
       println(buffer.take(bytesRead).joinToString(" ") { "%02x".format(it) })
     } catch (e: Exception) {
       println("Failed to read file: ${e.message}")
+    }
+  }
+
+  private fun download(arguments: String?) {
+    val file =
+        openedFile
+            ?: run {
+              println("No file opened.")
+              return
+            }
+
+    if (arguments == null) {
+      println("Usage: download <local-path>")
+      return
+    }
+
+    val buffer = ByteArray(1024 * 1024)
+
+    try {
+      FileOutputStream(arguments).use { output ->
+        var offset = 0L
+        var totalRead = 0L
+
+        while (offset < file.size) {
+          val length = minOf(buffer.size.toLong(), file.size - offset).toInt()
+
+          val bytesRead =
+              file.read(
+                  filePosition = offset,
+                  buffer = buffer,
+                  bufferOffset = 0,
+                  length = length,
+              )
+
+          if (bytesRead <= 0) {
+            throw RuntimeException("Unexpected end of file at offset $offset")
+          }
+
+          output.write(buffer, 0, bytesRead)
+
+          offset += bytesRead
+          totalRead += bytesRead
+
+          val percent = (totalRead * 100 / file.size).toInt()
+          print("\rDownloading: $percent% ($totalRead / ${file.size} bytes)")
+        }
+
+        println()
+        println("Downloaded to $arguments")
+      }
+    } catch (e: Exception) {
+      println()
+      println("Download failed: ${e.message}")
     }
   }
 

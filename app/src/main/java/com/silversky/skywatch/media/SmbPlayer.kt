@@ -1,20 +1,26 @@
 package com.silversky.skywatch.media
 
 import android.content.Context
-import android.net.Uri
+import androidx.annotation.OptIn
+import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import com.silversky.core.client.SmbClient
+import com.silversky.core.logger.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+@OptIn(UnstableApi::class)
 suspend fun prepareSmbMediaSource(
     smbClient: SmbClient,
     shareName: String,
     path: String,
+    logger: Logger,
 ): MediaSource {
   return withContext(Dispatchers.IO) {
     val file =
@@ -50,12 +56,11 @@ suspend fun prepareSmbMediaSource(
             }
             .map { subtitle ->
               MediaItem.SubtitleConfiguration.Builder(
-                      Uri.parse(
-                          buildSmbUri(
+                      buildSmbUri(
                               shareName = shareName,
                               path = subtitle.path,
                           )
-                      )
+                          .toUri()
                   )
                   .setMimeType("application/x-subrip")
                   .setLabel(subtitle.name)
@@ -65,16 +70,32 @@ suspend fun prepareSmbMediaSource(
     val mediaItem =
         MediaItem.Builder().setUri(videoUri).setSubtitleConfigurations(subtitles).build()
 
-    val dataSourceFactory = SmbDataSourceFactory(smbClient)
+    val dataSourceFactory = SmbDataSourceFactory(smbClient, logger)
 
     DefaultMediaSourceFactory(dataSourceFactory).createMediaSource(mediaItem)
   }
 }
 
+@OptIn(UnstableApi::class)
 fun createSmbPlayer(context: Context): ExoPlayer {
   val trackSelector = DefaultTrackSelector(context)
 
-  return ExoPlayer.Builder(context).setTrackSelector(trackSelector).build()
+  val loadControl =
+      DefaultLoadControl.Builder()
+          .setBufferDurationsMs(
+              30_000,
+              120_000,
+              3_000,
+              5_000,
+          )
+          .setTargetBufferBytes(256 * 1024 * 1024)
+          .setPrioritizeTimeOverSizeThresholds(true)
+          .build()
+
+  return ExoPlayer.Builder(context)
+      .setTrackSelector(trackSelector)
+      .setLoadControl(loadControl)
+      .build()
 }
 
 private fun buildSmbUri(

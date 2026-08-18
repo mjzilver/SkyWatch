@@ -44,6 +44,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.media3.common.C
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.PlayerView
@@ -65,19 +66,50 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.milliseconds
 
+@androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun PlayerScreen(
     client: SmbClient,
     shareName: String,
     file: SmbEntry,
     logger: Logger,
+    playbackPositionStore: PlaybackPositionStore,
     onBack: () -> Unit,
 ) {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
 
   val player = remember {
-    createSmbPlayer(context)
+    createSmbPlayer(context).apply {
+      addListener(
+          object : androidx.media3.common.Player.Listener {
+            override fun onPlaybackStateChanged(state: Int) {
+              logger.debug(
+                  "PLAYER STATE: ${
+                              when (state) {
+                                  androidx.media3.common.Player.STATE_IDLE -> "IDLE"
+                                  androidx.media3.common.Player.STATE_BUFFERING -> "BUFFERING"
+                                  androidx.media3.common.Player.STATE_READY -> "READY"
+                                  androidx.media3.common.Player.STATE_ENDED -> "ENDED"
+                                  else -> "UNKNOWN"
+                              }
+                          }"
+              )
+            }
+
+            override fun onIsLoadingChanged(isLoading: Boolean) {
+              logger.debug("PLAYER LOADING: $isLoading")
+            }
+
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+              logger.error(
+                  "PLAYER ERROR: ${error.errorCodeName}",
+                  error,
+              )
+            }
+          }
+      )
+    }
   }
 
   var loading by remember {
@@ -116,8 +148,6 @@ fun PlayerScreen(
     mutableStateOf(false)
   }
 
-  val playbackPositionStore = PlaybackPositionStore(context)
-
   LaunchedEffect(shareName, file.path) {
     loading = true
     error = null
@@ -130,6 +160,7 @@ fun PlayerScreen(
               smbClient = client,
               shareName = shareName,
               path = file.path,
+              logger,
           )
 
       val savedPosition =

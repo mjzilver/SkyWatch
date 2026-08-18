@@ -9,8 +9,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -22,11 +27,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import com.silversky.core.client.SmbClient
 import com.silversky.core.logger.Logger
 import com.silversky.core.smb.SmbEntry
 import com.silversky.core.smb.SmbServer
+import com.silversky.skywatch.utils.PlaybackPositionStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -37,6 +44,7 @@ fun FileBrowserScreen(
     server: SmbServer,
     shareName: String,
     logger: Logger,
+    playbackPositionStore: PlaybackPositionStore,
     onFileSelected: (SmbEntry) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -46,6 +54,10 @@ fun FileBrowserScreen(
 
   var entries by remember {
     mutableStateOf<List<SmbEntry>>(emptyList())
+  }
+
+  var resumeEntries by remember {
+    mutableStateOf<Set<String>>(emptySet())
   }
 
   var loading by remember {
@@ -79,13 +91,13 @@ fun FileBrowserScreen(
     try {
       logger.debug("Listing //$shareName/$currentPath")
 
-      withContext(Dispatchers.IO) {
-        entries =
+      entries =
+          withContext(Dispatchers.IO) {
             client.list(
                 shareName = shareName,
                 path = currentPath,
             )
-      }
+          }
 
       logger.debug("Found ${entries.size} entries")
     } catch (e: Exception) {
@@ -95,14 +107,36 @@ fun FileBrowserScreen(
       )
 
       entries = emptyList()
-
       error = e.message ?: "Failed to load directory"
     } finally {
       loading = false
     }
   }
 
-  Column(modifier = Modifier.fillMaxSize().padding(48.dp)) {
+  LaunchedEffect(
+      shareName,
+      currentPath,
+      entries,
+  ) {
+    resumeEntries =
+        withContext(Dispatchers.IO) {
+          entries
+              .filter { !it.isDirectory }
+              .filter {
+                playbackPositionStore.hasEntry(
+                    ip = server.ipAddress,
+                    share = shareName,
+                    path = it.path,
+                )
+              }
+              .map { it.path }
+              .toSet()
+        }
+  }
+
+  Column(
+      modifier = Modifier.fillMaxSize().padding(48.dp),
+  ) {
     ScreenHeader(
         title = shareName,
         subtitle =
@@ -140,6 +174,7 @@ fun FileBrowserScreen(
           ) { entry ->
             FileEntryButton(
                 entry = entry,
+                hasResumePosition = entry.path in resumeEntries,
                 onClick = {
                   if (entry.isDirectory) {
                     currentPath = entry.path
@@ -159,6 +194,7 @@ fun FileBrowserScreen(
 @Composable
 private fun FileEntryButton(
     entry: SmbEntry,
+    hasResumePosition: Boolean,
     onClick: () -> Unit,
 ) {
   Button(
@@ -167,17 +203,21 @@ private fun FileEntryButton(
   ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-      Text(
-          text =
-              if (entry.isDirectory) {
-                "📁  ${entry.name}"
-              } else {
-                "▶  ${entry.name}"
-              }
+      Icon(
+          imageVector =
+              when {
+                entry.isDirectory -> Icons.Outlined.Folder
+                hasResumePosition -> Icons.Filled.PlayCircle
+                else -> Icons.Filled.PlayArrow
+              },
+          contentDescription = null,
       )
+
+      Spacer(modifier = Modifier.width(12.dp))
+
+      Text(text = entry.name)
     }
   }
 }

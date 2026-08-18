@@ -10,6 +10,16 @@ private val Context.playbackDataStore by preferencesDataStore(name = "playback_p
 
 class PlaybackPositionStore(private val context: Context) {
 
+  suspend fun hasEntry(
+      ip: String,
+      share: String,
+      path: String,
+  ): Boolean {
+    val key = longPreferencesKey(key(ip, share, path))
+
+    return context.playbackDataStore.data.first().contains(key)
+  }
+
   suspend fun getPosition(
       ip: String,
       share: String,

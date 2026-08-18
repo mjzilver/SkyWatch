@@ -23,6 +23,7 @@ import com.silversky.skywatch.ui.ScanResult
 import com.silversky.skywatch.ui.ServerConnectionInput
 import com.silversky.skywatch.ui.ServerDialog
 import com.silversky.skywatch.ui.ShareScreen
+import com.silversky.skywatch.utils.PlaybackPositionStore
 import com.silversky.skywatch.utils.ServerPersistenceManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -44,6 +45,10 @@ fun SkyWatchApp(
 
   val persistenceManager = remember {
     ServerPersistenceManager(context)
+  }
+
+  val playbackPositionStore = remember {
+    PlaybackPositionStore(context)
   }
 
   val prefs = remember {
@@ -400,6 +405,7 @@ fun SkyWatchApp(
             server = server,
             shareName = share,
             logger = logger,
+            playbackPositionStore = playbackPositionStore,
             onFileSelected = { file ->
               selectedFile = file
               screen = Screen.PLAYER
@@ -423,6 +429,7 @@ fun SkyWatchApp(
             shareName = share,
             file = file,
             logger = logger,
+            playbackPositionStore = playbackPositionStore,
             onBack = {
               selectedFile = null
               screen = Screen.BROWSER

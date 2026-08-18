@@ -15,8 +15,8 @@ dependencies {
   implementation("com.rapid7.client:dcerpc:0.12.13")
   implementation("eu.agno3.jcifs:jcifs-ng:2.1.9") {
     exclude(
-      group = "org.bouncycastle",
-      module = "bcprov-jdk15on"
+        group = "org.bouncycastle",
+        module = "bcprov-jdk15on",
     )
   }
 }
