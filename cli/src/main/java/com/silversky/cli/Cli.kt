@@ -167,6 +167,7 @@ class Cli(
 
     private fun open(path: String?) {
         if (path == null) {
+            println("Usage: open <path>")
             return
         }
 
@@ -174,16 +175,22 @@ class Cli(
             println("Not connected.")
             return
         }
+
         val share = share ?: run {
             println("No share selected.")
             return
         }
 
-        openedFile?.close()
+        try {
+            openedFile?.close()
+            openedFile = client.openFile(share, path)
 
-        openedFile = client.openFile(share, path)
-
-        println("File $path, size ${openedFile!!.size}")
+            println("File: $path")
+            println("Size: ${openedFile!!.size} bytes")
+        } catch (e: Exception) {
+            openedFile = null
+            println("Failed to open file: ${e.message}")
+        }
     }
 
     private fun read(arguments: String?) {
@@ -218,27 +225,20 @@ class Cli(
         }
 
         val actualLength = minOf(
-            length,
-            (file.size - offset).toInt()
+            length, (file.size - offset).toInt()
         )
 
         val buffer = ByteArray(actualLength)
 
         try {
             val bytesRead = file.read(
-                filePosition = offset,
-                buffer = buffer,
-                bufferOffset = 0,
-                length = actualLength
+                filePosition = offset, buffer = buffer, bufferOffset = 0, length = actualLength
             )
 
             println("Read $bytesRead bytes:")
 
             println(
-                buffer
-                    .take(bytesRead)
-                    .joinToString(" ") { "%02x".format(it) }
-            )
+                buffer.take(bytesRead).joinToString(" ") { "%02x".format(it) })
         } catch (e: Exception) {
             println("Failed to read file: ${e.message}")
         }
@@ -250,6 +250,7 @@ class Cli(
         share = null
         currentPath = ""
         openedFile?.close()
+        openedFile = null
 
         println("Disconnected.")
     }
@@ -257,16 +258,19 @@ class Cli(
     private fun help() {
         println(
             """
-            Commands:
-              scan                                Scan network for SMB servers
-              connect <server> <user> <password>  Connect to an SMB server
-              list [path]                         List files
-              shares                              List shares
-              use <share>                         Use share folder
-              disconnect                          Disconnect
-              help                                Show this help
-              exit                                Exit
-            """.trimIndent()
+        Commands:
+          scan                                Scan network for SMB servers
+          connect <server> <user> <password>  Connect to an SMB server
+          list [path]                         List files
+          shares                              List shares
+          use <share>                         Use share folder
+          open <path>                         Open a file
+          read <offset> <length>              Read bytes from opened file
+          info                                Show current connection
+          disconnect                          Disconnect
+          help                                Show this help
+          exit                                Exit
+        """.trimIndent()
         )
     }
 }

@@ -24,5 +24,4 @@ tasks.named<JavaExec>("run") {
 
 dependencies {
     implementation(project(":core"))
-    implementation(project(":core"))
 }
