@@ -24,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +47,7 @@ import androidx.media3.common.Tracks
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.PlayerView
+import androidx.tv.material3.Button
 import androidx.tv.material3.Text
 import com.silversky.core.client.SmbClient
 import com.silversky.core.logger.Logger
@@ -56,8 +58,10 @@ import com.silversky.skywatch.ui.theme.SubtitleBackground
 import com.silversky.skywatch.ui.theme.SubtitleOutline
 import com.silversky.skywatch.ui.theme.SubtitleText
 import com.silversky.skywatch.ui.theme.SubtitleWindow
+import com.silversky.skywatch.utils.PlaybackPositionStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -70,6 +74,7 @@ fun PlayerScreen(
     onBack: () -> Unit,
 ) {
   val context = LocalContext.current
+  val scope = rememberCoroutineScope()
 
   val player = remember {
     createSmbPlayer(context)
@@ -111,6 +116,8 @@ fun PlayerScreen(
     mutableStateOf(false)
   }
 
+  val playbackPositionStore = PlaybackPositionStore(context)
+
   LaunchedEffect(shareName, file.path) {
     loading = true
     error = null
@@ -125,8 +132,15 @@ fun PlayerScreen(
               path = file.path,
           )
 
+      val savedPosition =
+          playbackPositionStore.getPosition(client.server!!.ipAddress, shareName, file.path)
+
       player.setMediaSource(mediaSource)
       player.prepare()
+
+      if (savedPosition > 0L) {
+        player.seekTo(savedPosition)
+      }
       player.playWhenReady = true
 
       loading = false
@@ -141,16 +155,24 @@ fun PlayerScreen(
     }
   }
 
-  LaunchedEffect(player) {
+  LaunchedEffect(player, file.path) {
     while (isActive) {
       position = player.currentPosition.coerceAtLeast(0L)
       duration = player.duration.takeIf { it > 0L } ?: 0L
       isPlaying = player.isPlaying
 
-      delay(250.milliseconds)
+      if (player.isPlaying) {
+        playbackPositionStore.savePosition(
+            ip = client.server!!.ipAddress,
+            share = shareName,
+            path = file.path,
+            position = player.currentPosition,
+        )
+      }
+
+      delay(5_000.milliseconds)
     }
   }
-
   LaunchedEffect(
       controlsVisible,
       showAudioMenu,
@@ -307,10 +329,36 @@ fun PlayerScreen(
           file = file,
           position = position,
           duration = duration,
-          isPlaying = isPlaying,
+          isPlaying,
+          onPlay = {
+            if (player.isPlaying) {
+              player.pause()
+            } else {
+              try {
+                client.ensureConnected()
+                player.play()
+              } catch (e: Exception) {
+                logger.error("Failed to reconnect SMB", e)
+              }
+            }
+          },
           onAudio = {
             showAudioMenu = true
             controlsVisible = true
+          },
+          onStop = {
+            val currentPosition = player.currentPosition
+
+            scope.launch {
+              playbackPositionStore.savePosition(
+                  ip = client.server!!.ipAddress,
+                  share = shareName,
+                  path = file.path,
+                  position = currentPosition,
+              )
+            }
+            player.stop()
+            onBack()
           },
           onSubtitles = {
             showSubtitleMenu = true
@@ -362,7 +410,9 @@ private fun PlayerControls(
     position: Long,
     duration: Long,
     isPlaying: Boolean,
+    onPlay: () -> Unit,
     onAudio: () -> Unit,
+    onStop: () -> Unit,
     onSubtitles: () -> Unit,
     onSpeed: () -> Unit,
 ) {
@@ -375,11 +425,6 @@ private fun PlayerControls(
   }
 
   Box(modifier = Modifier.fillMaxSize()) {
-    /*
-     * Bottom gradient-like dark area.
-     *
-     * Using a solid translucent background keeps this lightweight.
-     */
     Column(
         modifier =
             Modifier.align(Alignment.BottomCenter)
@@ -397,9 +442,6 @@ private fun PlayerControls(
 
       Spacer(modifier = Modifier.height(12.dp))
 
-      /*
-       * Progress.
-       */
       Row(
           modifier = Modifier.fillMaxWidth(),
           verticalAlignment = Alignment.CenterVertically,
@@ -451,13 +493,12 @@ private fun PlayerControls(
                   "Play"
                 },
             modifier = Modifier.focusRequester(playFocus),
-            onClick = {
-              if (player.isPlaying) {
-                player.pause()
-              } else {
-                player.play()
-              }
-            },
+            onClick = onPlay,
+        )
+
+        PlayerButton(
+            text = "Stop",
+            onClick = onStop,
         )
 
         PlayerButton(
@@ -494,7 +535,7 @@ private fun PlayerButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-  androidx.tv.material3.Button(
+  Button(
       onClick = onClick,
       modifier = modifier,
   ) {
@@ -660,7 +701,7 @@ private fun TrackButton(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-  androidx.tv.material3.Button(
+  Button(
       onClick = onClick,
       modifier = Modifier.fillMaxWidth(),
   ) {

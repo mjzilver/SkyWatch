@@ -42,4 +42,5 @@ dependencies {
   implementation("androidx.media3:media3-ui:1.9.0")
   implementation("com.google.code.gson:gson:2.10.1")
   implementation("androidx.compose.material3:material3")
+  implementation("androidx.datastore:datastore-preferences:1.1.7")
 }

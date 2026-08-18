@@ -22,9 +22,7 @@ import com.silversky.core.smb.SmbServer
 import java.util.EnumSet
 
 class SmbClient(private val logger: Logger) : AutoCloseable {
-
   private val client = SMBClient()
-
   private val connectionLock = Any()
 
   var server: SmbServer? = null
@@ -32,7 +30,6 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
 
   private var username: String? = null
   private var password: String? = null
-
   private var connection: Connection? = null
   private var session: Session? = null
 
@@ -41,59 +38,60 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
       username: String,
       password: String,
   ) {
-    synchronized(connectionLock) {
-      if (connection != null && session != null) {
-        logger.warn("Already connected")
-        return
+      synchronized(connectionLock) {
+          if (connection != null && session != null) {
+              logger.warn("Already connected")
+              return
+          }
+
+          logger.info(
+              "Connecting to ${server.name ?: server.ipAddress} " +
+                      "(${server.ipAddress}:${server.port})"
+          )
+
+          var newConnection: Connection? = null
+
+          try {
+              newConnection =
+                  client.connect(
+                      server.ipAddress,
+                      server.port,
+                  )
+
+              val authenticationContext =
+                  AuthenticationContext(
+                      username,
+                      password.toCharArray(),
+                      null,
+                  )
+
+              val newSession = newConnection.authenticate(authenticationContext)
+
+              this.server = server
+              this.username = username
+              this.password = password
+              this.connection = newConnection
+              this.session = newSession
+
+              if (server.name == null) {
+                  server.name = newConnection.connectionContext.server.serverName
+              }
+
+              logger.info("Connected to ${server.name ?: server.ipAddress} as $username")
+          } catch (e: Exception) {
+              try {
+                  newConnection?.close()
+              } catch (_: Exception) {
+              }
+
+              this.connection = null
+              this.session = null
+
+              logger.error("Failed to connect to " + "${server.name ?: server.ipAddress}: ${e.message}")
+
+              throw e
+          }
       }
-
-      logger.info(
-          "Connecting to ${server.name ?: server.ipAddress} " +
-              "(${server.ipAddress}:${server.port})"
-      )
-
-      var newConnection: Connection? = null
-
-      try {
-        newConnection =
-            client.connect(
-                server.ipAddress,
-                server.port,
-            )
-
-        val authenticationContext =
-            AuthenticationContext(
-                username,
-                password.toCharArray(),
-                null,
-            )
-
-        val newSession = newConnection.authenticate(authenticationContext)
-
-        this.server = server
-        this.username = username
-        this.password = password
-        this.connection = newConnection
-        this.session = newSession
-
-        if (server.name == null) {
-          server.name = newConnection.connectionContext.server.serverName
-        }
-
-        logger.info("Connected to ${server.name ?: server.ipAddress} as $username")
-      } catch (e: Exception) {
-        try {
-          newConnection?.close()
-        } catch (_: Exception) {}
-
-        this.connection = null
-        this.session = null
-
-        logger.error("Failed to connect to " + "${server.name ?: server.ipAddress}: ${e.message}")
-
-        throw e
-      }
-    }
   }
 
   fun listShares(): List<String> {
@@ -115,10 +113,21 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
     }
   }
 
-  fun getServerName(): String? {
+  fun ensureConnected() {
     synchronized(connectionLock) {
-      return connection?.connectionContext?.server?.serverName
-          ?: throw IllegalStateException("Not connected")
+      if (connection != null && session != null) {
+        return
+      }
+
+      val currentServer = server ?: throw IllegalStateException("No server available")
+      val currentUsername = username ?: throw IllegalStateException("No username available")
+      val currentPassword = password ?: throw IllegalStateException("No password available")
+
+      connectLocked(
+          server = currentServer,
+          username = currentUsername,
+          password = currentPassword,
+      )
     }
   }
 
@@ -215,28 +224,23 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
         lastException = e
 
         if (attempt == 4) {
-          logger.error("SMB operation failed after 5 attempts: " + "${e.message}")
-
+          logger.error(
+              "SMB operation failed after 5 attempts",
+              e,
+          )
           throw e
         }
 
-        val backoff = 100L shl attempt
-
-        logger.warn(
-            "SMB operation failed " +
-                "(attempt ${attempt + 1}/5): " +
-                "${e.message}. " +
-                "Retrying in ${backoff}ms."
-        )
-
-        Thread.sleep(backoff)
+        val delay = 200L shl attempt
+        logger.warn("SMB operation failed " + "(attempt ${attempt + 1}/5): ${e.message}")
+        Thread.sleep(delay)
 
         try {
           reconnect()
-        } catch (reconnectException: Exception) {
-          lastException = reconnectException
+        } catch (e: Exception) {
+          lastException = e
 
-          logger.warn("SMB reconnect failed: " + "${reconnectException.message}")
+          logger.warn("Reconnect failed: ${e.message}")
         }
       }
     }
@@ -247,9 +251,7 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
   private fun reconnect() {
     synchronized(connectionLock) {
       val server = server ?: throw IllegalStateException("No server available for reconnect")
-
       val username = username ?: throw IllegalStateException("No username available for reconnect")
-
       val password = password ?: throw IllegalStateException("No password available for reconnect")
 
       logger.info("Reconnecting to ${server.name ?: server.ipAddress}")
@@ -301,10 +303,6 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
       this.connection = newConnection
       this.session = newSession
 
-      if (server.name == null) {
-        server.name = newConnection.connectionContext.server.serverName
-      }
-
       logger.info("Connected to ${server.name ?: server.ipAddress} as $username")
     } catch (e: Exception) {
       try {
@@ -317,12 +315,6 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
       logger.error("Failed to connect to " + "${server.name ?: server.ipAddress}: ${e.message}")
 
       throw e
-    }
-  }
-
-  private fun invalidateConnection() {
-    synchronized(connectionLock) {
-      invalidateConnectionLocked()
     }
   }
 

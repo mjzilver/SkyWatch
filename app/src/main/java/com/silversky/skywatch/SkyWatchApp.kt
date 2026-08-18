@@ -246,39 +246,6 @@ fun SkyWatchApp(
     }
   }
 
-  fun addServer(input: ServerConnectionInput) {
-    val server =
-        SmbServer(
-            name = input.name,
-            ipAddress = input.address,
-        )
-
-    logger.info("Adding server ${server.ipAddress}")
-
-    scope.launch(Dispatchers.IO) {
-      try {
-        persistenceManager.saveServer(
-            SavedServer(
-                server = server,
-                username = input.username,
-                password = input.password,
-            )
-        )
-
-        val servers = persistenceManager.getServers()
-
-        withContext(Dispatchers.Main) {
-          cachedServers = servers
-        }
-      } catch (e: Exception) {
-        logger.error(
-            "Failed to add server",
-            e,
-        )
-      }
-    }
-  }
-
   fun updateServer(
       input: ServerConnectionInput,
       oldServer: SmbServer,
@@ -310,27 +277,6 @@ fun SkyWatchApp(
       } catch (e: Exception) {
         logger.error(
             "Failed to update server",
-            e,
-        )
-      }
-    }
-  }
-
-  fun deleteServer(server: SmbServer) {
-    logger.info("Deleting server ${server.ipAddress}")
-
-    scope.launch(Dispatchers.IO) {
-      try {
-        persistenceManager.deleteServer(server)
-
-        val servers = persistenceManager.getServers()
-
-        withContext(Dispatchers.Main) {
-          cachedServers = servers
-        }
-      } catch (e: Exception) {
-        logger.error(
-            "Failed to delete server",
             e,
         )
       }

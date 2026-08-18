@@ -1,7 +1,7 @@
 package com.silversky.skywatch.ui.theme
 
-import androidx.compose.ui.graphics.Color
 import android.graphics.Color as AndroidColor
+import androidx.compose.ui.graphics.Color
 
 val Black = Color(0xFF090909)
 val DarkGray = Color(0xFF151515)
