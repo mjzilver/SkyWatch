@@ -40,4 +40,6 @@ dependencies {
     implementation(project(":core"))
     implementation("androidx.media3:media3-exoplayer:1.9.0")
     implementation("androidx.media3:media3-ui:1.9.0")
+    implementation("com.google.code.gson:gson:2.10.1")
+    implementation(libs.androidx.compose.ui.test.junit4)
 }

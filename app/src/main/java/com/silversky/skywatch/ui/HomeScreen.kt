@@ -23,12 +23,11 @@ import com.silversky.skywatch.model.SavedServer
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    servers: List<SmbServer>,
-    scanning: Boolean,
+    savedServers: List<SavedServer>,
     error: String?,
-    onServerClick: (SmbServer) -> Unit,
-    onAddServer: () -> Unit,
-    onScanNetwork: () -> Unit
+    onServerClick: (SavedServer) -> Unit,
+    onEditServer: (SavedServer) -> Unit,
+    onAddServer: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -51,32 +50,10 @@ fun HomeScreen(
             )
         }
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically
+        Button(
+            onClick = onAddServer
         ) {
-            Button(
-                onClick = onScanNetwork,
-                enabled = !scanning
-            ) {
-                Text(
-                    if (scanning) {
-                        "Scanning..."
-                    } else {
-                        "Scan Network"
-                    }
-                )
-            }
-
-            Spacer(
-                modifier = Modifier.width(16.dp)
-            )
-
-            Button(
-                onClick = onAddServer,
-                enabled = !scanning
-            ) {
-                Text("Add Server")
-            }
+            Text("Add Server")
         }
 
         error?.let {
@@ -88,7 +65,7 @@ fun HomeScreen(
 
         Column {
             Text(
-                text = "Network Servers",
+                text = "Saved Servers",
                 style = MaterialTheme.typography.titleLarge
             )
 
@@ -96,26 +73,21 @@ fun HomeScreen(
                 modifier = Modifier.height(12.dp)
             )
 
-            if (servers.isEmpty()) {
+            if (savedServers.isEmpty()) {
                 Text(
-                    text = if (scanning) {
-                        "Searching for SMB servers..."
-                    } else {
-                        "No SMB servers found."
-                    }
+                    text = "No saved servers"
                 )
             } else {
                 Column(
                     verticalArrangement =
                         Arrangement.spacedBy(8.dp)
                 ) {
-                    servers.forEach { server ->
+                    savedServers.forEach { server ->
                         Button(
                             onClick = {
                                 onServerClick(server)
                             },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !scanning
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -124,14 +96,26 @@ fun HomeScreen(
                                 verticalAlignment =
                                     Alignment.CenterVertically
                             ) {
-                                Text(
-                                    server.name
-                                        ?: server.ipAddress
-                                )
-
-                                Text(
-                                    server.ipAddress
-                                )
+                                Column {
+                                    Text(
+                                        server.server.name
+                                            ?: server.server.ipAddress
+                                    )
+                                    Text(
+                                        server.server.ipAddress,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                                
+                                // Edit button for saved servers
+                                Button(
+                                    onClick = { 
+                                        onEditServer(server) 
+                                    },
+                                    modifier = Modifier.width(80.dp)
+                                ) {
+                                    Text("Edit")
+                                }
                             }
                         }
                     }

@@ -29,7 +29,8 @@ class MainActivity : ComponentActivity() {
                     shape = RectangleShape
                 ) {
                     SkyWatchApp(
-                        logger = logger
+                        logger = logger,
+                        context = this@MainActivity
                     )
                 }
             }

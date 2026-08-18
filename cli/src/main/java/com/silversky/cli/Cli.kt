@@ -56,7 +56,7 @@ class Cli(
         println("Scanning...")
 
         val scanner = SmbScanner()
-        servers = scanner.scanNetwork()
+        servers = scanner.scanNetwork(logger)
 
         if (servers.isEmpty()) {
             println("No SMB servers found.")
@@ -86,7 +86,7 @@ class Cli(
         val server = serverArg.toIntOrNull()?.let { index ->
             servers.getOrNull(index - 1)
         } ?: SmbServer(
-            ipAddress = serverArg, name = resolveHostName(serverArg)
+            ipAddress = serverArg, name = resolveHostName(logger, serverArg)
         )
 
         val username = parts[1]

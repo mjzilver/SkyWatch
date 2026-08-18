@@ -1,5 +1,6 @@
 package com.silversky.skywatch
 
+import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -7,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import com.silversky.core.client.SmbClient
 import com.silversky.core.logger.Logger
 import com.silversky.core.smb.SmbEntry
@@ -19,6 +21,7 @@ import com.silversky.skywatch.ui.PlayerScreen
 import com.silversky.skywatch.ui.ServerConnectionInput
 import com.silversky.skywatch.ui.ServerDialog
 import com.silversky.skywatch.ui.ShareScreen
+import com.silversky.skywatch.utils.ServerPersistenceManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -32,9 +35,12 @@ private enum class Screen {
 
 @Composable
 fun SkyWatchApp(
-    logger: Logger
+    logger: Logger,
+    context: Context
 ) {
     val scope = rememberCoroutineScope()
+    val persistenceManager = ServerPersistenceManager(context)
+    val prefs = context.getSharedPreferences("skywatch_prefs", Context.MODE_PRIVATE)
 
     var screen by remember {
         mutableStateOf(Screen.HOME)
@@ -45,6 +51,11 @@ fun SkyWatchApp(
     }
 
     var servers by remember {
+        mutableStateOf<List<SmbServer>>(emptyList())
+    }
+
+    // Cache for scanned servers
+    var cachedServers by remember {
         mutableStateOf<List<SmbServer>>(emptyList())
     }
 
@@ -68,8 +79,24 @@ fun SkyWatchApp(
         mutableStateOf<SmbClient?>(null)
     }
 
-    var scanning = false;
+    // Add scanning state variable
+    var scanning by remember {
+        mutableStateOf(false)
+    }
 
+    // Load saved servers on startup
+    val loadedServers = persistenceManager.loadServers()
+    if (loadedServers.isNotEmpty() && cachedServers.isEmpty()) {
+        cachedServers = loadedServers.map { it.server }
+    }
+
+    fun loadSavedServers() {
+        val loadedServers = persistenceManager.loadServers()
+        // We could update the UI here to show saved servers, but for now we'll just keep them in memory
+    }
+    fun getServerList(): List<SmbServer> {
+        return cachedServers
+    }
     fun connect(
         input: ServerConnectionInput
     ) {
@@ -82,38 +109,47 @@ fun SkyWatchApp(
             "Connecting to ${server.ipAddress}"
         )
 
-        val client = SmbClient(logger)
+        scope.launch(Dispatchers.IO) {
+            val client = SmbClient(logger)
 
-        try {
-            client.connect(
-                server = server,
-                username = input.username,
-                password = input.password
-            )
+            try {
+                client.connect(
+                    server = server,
+                    username = input.username,
+                    password = input.password
+                )
 
-            smbClient?.close()
+                withContext(Dispatchers.Main) {
+                    smbClient?.close()
+                    smbClient = client
+                    selectedServer = server
 
-            smbClient = client
-            selectedServer = server
+                    val saved = SavedServer(
+                        server = server,
+                        username = input.username,
+                        password = input.password
+                    )
 
-            val saved = SavedServer(
-                server = server,
-                username = input.username,
-                password = input.password
-            )
+                    // Save the server to persistent storage
+                    val existingServers = persistenceManager.loadServers()
+                    val updatedServers = existingServers + saved
+                    persistenceManager.saveServers(updatedServers)
 
-            showServerDialog = false
-            screen = Screen.SHARES
+                    showServerDialog = false
+                    screen = Screen.SHARES
+                }
+            } catch (e: Exception) {
+                logger.error(
+                    "Failed to connect",
+                    e
+                )
 
-        } catch (e: Exception) {
-            logger.error(
-                "Failed to connect",
-                e
-            )
+                withContext(Dispatchers.Main) {
+                    client.close()
 
-            client.close()
-
-            // TODO: surface connection error in dialog.
+                    // TODO: surface connection error in dialog.
+                }
+            }
         }
     }
 
@@ -166,19 +202,40 @@ fun SkyWatchApp(
             try {
                 logger.info("Starting SMB network scan")
 
-                val found = SmbScanner().scanNetwork(logger)
+                val now = System.currentTimeMillis()
+                val cachedServersTimestamp = prefs.getLong("cached_servers_timestamp", 0)
+                val isCacheValid = now - cachedServersTimestamp < 5 * 60 * 1000 // 5 minutes
 
-                found.forEach { f ->
-                    logger.info("Found server ${f.name} with ip ${f.ipAddress}")
+                val found = if (isCacheValid) {
+                    logger.info("Using cached servers")
+                    cachedServers
+                } else {
+                    val scanned = SmbScanner().scanNetwork(logger)
+                    scanned.forEach { f ->
+                        logger.info("Found server ${f.name} with ip ${f.ipAddress}")
+                    }
+                    logger.info(
+                        "Found ${scanned.size} SMB servers"
+                    )
+                    scanned
                 }
 
-                logger.info(
-                    "Found ${found.size} SMB servers"
-                )
+                // Merge cached servers with saved servers to show all available servers
+                val savedServers = persistenceManager.loadServers()
+                val allServers = found + savedServers.map { it.server }
+                
+                // Remove duplicates by IP address
+                val uniqueServers = allServers.distinctBy { it.ipAddress }
 
                 withContext(Dispatchers.Main) {
-                    servers = found
+                    servers = uniqueServers
                     scanning = false
+                    
+                    // Cache the servers for future use
+                    if (!isCacheValid) {
+                        cachedServers = uniqueServers
+                        prefs.edit().putLong("cached_servers_timestamp", now).apply()
+                    }
                 }
             } catch (e: Exception) {
                 logger.error(
@@ -199,17 +256,19 @@ fun SkyWatchApp(
 
         Screen.HOME -> {
             HomeScreen(
-                servers = servers,
-                scanning = scanning,
+                savedServers = loadedServers,
                 error = scanError,
-                onServerClick = { server ->
-                    logger.info("Server clicked")
+                onServerClick = { savedServer ->
+                    logger.info("Saved server clicked")
+                    selectServer(savedServer)
+                },
+                onEditServer = { savedServer ->
+                    // For now, we'll just show the dialog again with existing data
+                    // In a real implementation, this would open an edit dialog
+                    logger.info("Edit server clicked")
                 },
                 onAddServer = {
                     showServerDialog = true
-                },
-                onScanNetwork = {
-                    scanNetwork()
                 }
             )
         }
