@@ -9,8 +9,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -20,9 +24,10 @@ import androidx.tv.material3.Text
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun BackButton(
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier
 ) {
-    Button(onClick = onClick) {
+    Button(onClick = onClick, modifier = modifier) {
         Text("Back")
     }
 }
@@ -52,11 +57,19 @@ fun ErrorMessage(
 fun ScreenHeader(
     title: String, subtitle: String? = null, onBack: (() -> Unit)? = null
 ) {
+    val backFocus = remember {
+        FocusRequester()
+    }
+
+    LaunchedEffect(Unit) {
+        backFocus.requestFocus()
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically
     ) {
         if (onBack != null) {
-            BackButton(onClick = onBack)
+            BackButton(onClick = onBack, Modifier.focusRequester(backFocus))
 
             Spacer(
                 modifier = Modifier.width(24.dp)

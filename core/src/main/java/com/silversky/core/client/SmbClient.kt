@@ -28,29 +28,43 @@ class SmbClient(
     private val client = SMBClient()
 
     var server: SmbServer? = null
+        private set
+
+    private var username: String? = null
+    private var password: String? = null
+
     private var connection: Connection? = null
     private var session: Session? = null
 
-    fun connect(server: SmbServer, username: String, password: String) {
+    fun connect(
+        server: SmbServer,
+        username: String,
+        password: String
+    ) {
         if (connection != null) {
             logger.warn("Already connected")
             return
         }
 
         logger.info(
-            "Connecting to ${server.name ?: server.ipAddress} " + "(${server.ipAddress}:${server.port})"
+            "Connecting to ${server.name ?: server.ipAddress} " +
+                    "(${server.ipAddress}:${server.port})"
         )
 
         try {
             val conn = client.connect(server.ipAddress, server.port)
 
             val authenticationContext = AuthenticationContext(
-                username, password.toCharArray(), null
+                username,
+                password.toCharArray(),
+                null
             )
 
             val authenticatedSession = conn.authenticate(authenticationContext)
 
             this.server = server
+            this.username = username
+            this.password = password
             this.connection = conn
             this.session = authenticatedSession
 
@@ -62,86 +76,157 @@ class SmbClient(
                 "Connected to ${server.name ?: server.ipAddress} as $username"
             )
         } catch (e: Exception) {
-            logger.error(
-                "Failed to connect to " + "${server.name ?: server.ipAddress}: ${e.message}"
-            )
-
             connection?.close()
             connection = null
             session = null
             this.server = null
+
+            logger.error(
+                "Failed to connect to " +
+                        "${server.name ?: server.ipAddress}: ${e.message}"
+            )
 
             throw e
         }
     }
 
     fun listShares(): List<String> {
-        val session = session ?: throw IllegalStateException("Not connected")
+        return withReconnectRetry {
+            val session = session
+                ?: throw IllegalStateException("Not connected")
 
-        val transport = SMBTransportFactories.SRVSVC.getTransport(session)
-        val serverService = ServerService(transport)
+            val transport = SMBTransportFactories.SRVSVC.getTransport(session)
+            val serverService = ServerService(transport)
 
-        return serverService.shares0.filterNotNull().map { it.netName }
+            serverService.shares0
+                .filterNotNull()
+                .map { it.netName }
+        }
     }
 
     fun getServerName(): String? {
-        val connection = connection ?: throw IllegalStateException("Not connected")
+        val connection = connection
+            ?: throw IllegalStateException("Not connected")
 
         return connection.connectionContext.server.serverName
     }
 
     fun list(
-        shareName: String, path: String = ""
+        shareName: String,
+        path: String = ""
     ): List<SmbEntry> {
-        val session = session ?: throw IllegalStateException("Not connected")
+        return withReconnectRetry {
+            val session = session
+                ?: throw IllegalStateException("Not connected")
 
-        val share = session.connectShare(shareName) as DiskShare
+            val share = session.connectShare(shareName) as? DiskShare
+                ?: return@withReconnectRetry emptyList()
 
-        return share.list(path).filter { it.fileName != "." && it.fileName != ".." }.map { file ->
-                val filePath = if (path.isEmpty()) {
-                    file.fileName
-                } else {
-                    "$path\\${file.fileName}"
+            share.list(path)
+                .filter {
+                    it.fileName != "." && it.fileName != ".."
                 }
+                .map { file ->
+                    val filePath = if (path.isEmpty()) {
+                        file.fileName
+                    } else {
+                        "$path\\${file.fileName}"
+                    }
 
-                SmbEntry(
-                    name = file.fileName, path = filePath, isDirectory = isDirectory(file)
-                )
-            }
+                    SmbEntry(
+                        name = file.fileName,
+                        path = filePath,
+                        isDirectory = isDirectory(file)
+                    )
+                }
+        }
     }
 
     fun openFile(
-        shareName: String, path: String
+        shareName: String,
+        path: String
     ): SmbFile? {
-        val session = session ?: throw IllegalStateException("Not connected")
+        return withReconnectRetry {
+            val session = session
+                ?: throw IllegalStateException("Not connected")
 
-        val share = session.connectShare(shareName) as DiskShare
+            val share = session.connectShare(shareName) as DiskShare
 
-        if (!share.fileExists(path)) {
-            return null
+            if (!share.fileExists(path)) {
+                return@withReconnectRetry null
+            }
+
+            val file = share.openFile(
+                path,
+                EnumSet.of(AccessMask.GENERIC_READ),
+                EnumSet.noneOf(FileAttributes::class.java),
+                EnumSet.of(
+                    SMB2ShareAccess.FILE_SHARE_READ,
+                    SMB2ShareAccess.FILE_SHARE_WRITE
+                ),
+                SMB2CreateDisposition.FILE_OPEN,
+                EnumSet.noneOf(SMB2CreateOptions::class.java)
+            )
+
+            SmbFileImpl(file)
+        }
+    }
+
+    private fun <T> withReconnectRetry(
+        operation: () -> T
+    ): T {
+        try {
+            return operation()
+        } catch (e: Exception) {
+            logger.warn(
+                "SMB operation failed: ${e.message}. Attempting reconnect."
+            )
         }
 
-        val file = share.openFile(
-            path,
-            EnumSet.of(AccessMask.GENERIC_READ),
-            EnumSet.noneOf(FileAttributes::class.java),
-            EnumSet.of(
-                SMB2ShareAccess.FILE_SHARE_READ, SMB2ShareAccess.FILE_SHARE_WRITE
-            ),
-            SMB2CreateDisposition.FILE_OPEN,
-            EnumSet.noneOf(SMB2CreateOptions::class.java)
+        reconnect()
+
+        return operation()
+    }
+
+    private fun reconnect() {
+        val server = server
+            ?: throw IllegalStateException("No server available for reconnect")
+
+        val username = username
+            ?: throw IllegalStateException("No username available for reconnect")
+
+        val password = password
+            ?: throw IllegalStateException("No password available for reconnect")
+
+        logger.info(
+            "Reconnecting to ${server.name ?: server.ipAddress}"
         )
 
-        return SmbFileImpl(
-            file
+        invalidateConnection()
+
+        connect(
+            server = server,
+            username = username,
+            password = password
         )
+    }
+
+    private fun invalidateConnection() {
+        try {
+            connection?.close()
+        } catch (_: Exception) {
+        }
+
+        connection = null
+        session = null
     }
 
     private fun isDirectory(
         file: FileIdBothDirectoryInformation
     ): Boolean {
         return EnumWithValue.EnumUtils.isSet(
-            file.fileAttributes, FileAttributes.FILE_ATTRIBUTE_DIRECTORY
+            file.fileAttributes,
+            FileAttributes.FILE_ATTRIBUTE_DIRECTORY
         )
     }
 
@@ -151,6 +236,8 @@ class SmbClient(
         connection = null
         session = null
         server = null
+        username = null
+        password = null
 
         logger.debug("Disconnected")
     }

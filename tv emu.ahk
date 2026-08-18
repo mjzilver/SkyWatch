@@ -2,10 +2,10 @@
 
 #HotIf WinActive("Android Emulator")
 
-Up::Run("adb shell input keyevent DPAD_UP", , "Hide")
-Down::Run("adb shell input keyevent DPAD_DOWN", , "Hide")
-Left::Run("adb shell input keyevent DPAD_LEFT", , "Hide")
-Right::Run("adb shell input keyevent DPAD_RIGHT", , "Hide")
-Enter::Run("adb shell input keyevent DPAD_CENTER", , "Hide")
+Up::Run("adb -s emulator-5554 shell input keyevent DPAD_UP", , "Hide")
+Down::Run("adb -s emulator-5554 shell input keyevent DPAD_DOWN", , "Hide")
+Left::Run("adb -s emulator-5554 shell input keyevent DPAD_LEFT", , "Hide")
+Right::Run("adb -s emulator-5554 shell input keyevent DPAD_RIGHT", , "Hide")
+Enter::Run("adb -s emulator-5554 shell input keyevent DPAD_CENTER", , "Hide")
 
 #HotIf

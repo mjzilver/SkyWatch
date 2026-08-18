@@ -34,16 +34,19 @@ import androidx.tv.material3.RadioButton
 import androidx.tv.material3.Text
 
 data class ScanResult(
-    val ip: String, val name: String
+    val ip: String,
+    val name: String
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ScanDialog(
-    onDismiss: () -> Unit, onServerSelected: (ScanResult) -> Unit, servers: List<ScanResult>
+    onDismiss: () -> Unit,
+    onServerSelected: (ScanResult) -> Unit,
+    servers: List<ScanResult>
 ) {
-    var selectedServer by remember {
-        mutableStateOf<ScanResult?>(null)
+    var selectedServer by remember(servers) {
+        mutableStateOf(servers.firstOrNull())
     }
 
     val selectFocus = remember {
@@ -64,7 +67,8 @@ fun ScanDialog(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Scan Results", style = MaterialTheme.typography.headlineSmall
+                text = "Scan Results",
+                style = MaterialTheme.typography.headlineSmall
             )
 
             Spacer(
@@ -85,17 +89,24 @@ fun ScanDialog(
                             }
                             .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                         RadioButton(
-                            selected = selectedServer?.ip == server.ip, onClick = {
+                            selected = selectedServer?.ip == server.ip,
+                            onClick = {
                                 selectedServer = server
-                            })
+                            }
+                        )
+
                         Column {
                             Text(
-                                text = server.name, style = MaterialTheme.typography.bodyLarge
+                                text = server.name,
+                                style = MaterialTheme.typography.bodyLarge
                             )
+
                             Text(
-                                text = server.ip, style = MaterialTheme.typography.bodyMedium
+                                text = server.ip,
+                                style = MaterialTheme.typography.bodyMedium
                             )
                         }
                     }
@@ -111,9 +122,7 @@ fun ScanDialog(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
-                    onClick = {
-                        onDismiss()
-                    },
+                    onClick = onDismiss,
                     modifier = Modifier
                         .weight(1f)
                         .focusRequester(cancelFocus)
@@ -130,7 +139,8 @@ fun ScanDialog(
 
                                 else -> false
                             }
-                        }) {
+                        }
+                ) {
                     Text("Cancel")
                 }
 
@@ -138,7 +148,6 @@ fun ScanDialog(
                     onClick = {
                         selectedServer?.let {
                             onServerSelected(it)
-                            onDismiss()
                         }
                     },
                     modifier = Modifier
@@ -157,7 +166,8 @@ fun ScanDialog(
 
                                 else -> false
                             }
-                        }) {
+                        }
+                ) {
                     Text("Select")
                 }
             }

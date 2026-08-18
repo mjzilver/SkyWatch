@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,20 +32,27 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 
 data class ServerConnectionInput(
-    val name: String?, val address: String, val username: String, val password: String
+    val name: String?,
+    val address: String,
+    val username: String,
+    val password: String
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ServerDialog(
-    onDismiss: () -> Unit, onConnect: (ServerConnectionInput) -> Unit, onScan: () -> Unit
+    onDismiss: () -> Unit,
+    onConnect: (ServerConnectionInput) -> Unit,
+    onScan: () -> Unit,
+    initialAddress: String = "",
+    initialName: String = ""
 ) {
-    var name by remember {
-        mutableStateOf("")
+    var name by remember(initialName) {
+        mutableStateOf(initialName)
     }
 
-    var address by remember {
-        mutableStateOf("")
+    var address by remember(initialAddress) {
+        mutableStateOf(initialAddress)
     }
 
     var username by remember {
@@ -71,6 +79,10 @@ fun ServerDialog(
         FocusRequester()
     }
 
+    val scanFocus = remember {
+        FocusRequester()
+    }
+
     val connectFocus = remember {
         FocusRequester()
     }
@@ -85,7 +97,8 @@ fun ServerDialog(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Add SMB Server", style = MaterialTheme.typography.headlineSmall
+                text = "Add SMB Server",
+                style = MaterialTheme.typography.headlineSmall
             )
 
             Spacer(
@@ -133,56 +146,85 @@ fun ServerDialog(
                 label = "Password",
                 focusRequester = passwordFocus,
                 upFocus = usernameFocus,
-                downFocus = connectFocus
+                downFocus = scanFocus
             )
 
             Spacer(
                 modifier = Modifier.height(8.dp)
             )
 
-            Button(
-                onClick = {
-                    if (address.isNotBlank()) {
-                        onConnect(
-                            ServerConnectionInput(
-                                name = name.ifBlank {
-                                    null
-                                },
-                                address = address.trim(),
-                                username = username,
-                                password = password
-                            )
-                        )
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(connectFocus)
-                    .onPreviewKeyEvent { event ->
-                        if (event.type != KeyEventType.KeyDown) {
-                            return@onPreviewKeyEvent false
-                        }
-
-                        when (event.key) {
-                            Key.DirectionUp -> {
-                                passwordFocus.requestFocus()
-                                true
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = onScan,
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(scanFocus)
+                        .onPreviewKeyEvent { event ->
+                            if (event.type != KeyEventType.KeyDown) {
+                                return@onPreviewKeyEvent false
                             }
 
-                            else -> false
+                            when (event.key) {
+                                Key.DirectionUp -> {
+                                    passwordFocus.requestFocus()
+                                    true
+                                }
+
+                                Key.DirectionRight -> {
+                                    connectFocus.requestFocus()
+                                    true
+                                }
+
+                                else -> false
+                            }
                         }
-                    }) {
-                Text("Connect")
-            }
+                ) {
+                    Text("Scan Network")
+                }
 
-            Spacer(
-                modifier = Modifier.height(8.dp)
-            )
+                Button(
+                    onClick = {
+                        if (address.isNotBlank()) {
+                            onConnect(
+                                ServerConnectionInput(
+                                    name = name.ifBlank {
+                                        null
+                                    },
+                                    address = address.trim(),
+                                    username = username,
+                                    password = password
+                                )
+                            )
+                        }
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(connectFocus)
+                        .onPreviewKeyEvent { event ->
+                            if (event.type != KeyEventType.KeyDown) {
+                                return@onPreviewKeyEvent false
+                            }
 
-            Button(
-                onClick = onScan, modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Scan Network")
+                            when (event.key) {
+                                Key.DirectionUp -> {
+                                    passwordFocus.requestFocus()
+                                    true
+                                }
+
+                                Key.DirectionLeft -> {
+                                    scanFocus.requestFocus()
+                                    true
+                                }
+
+                                else -> false
+                            }
+                        }
+                ) {
+                    Text("Connect")
+                }
             }
         }
     }
@@ -201,7 +243,8 @@ private fun TvTextField(
         modifier = Modifier.fillMaxWidth()
     ) {
         Text(
-            text = label, style = MaterialTheme.typography.labelLarge
+            text = label,
+            style = MaterialTheme.typography.labelLarge
         )
 
         Spacer(
@@ -228,12 +271,16 @@ private fun TvTextField(
 
                     when (event.key) {
                         Key.DirectionUp -> {
-                            upFocus?.requestFocus() ?: return@onPreviewKeyEvent false
+                            upFocus?.requestFocus()
+                                ?: return@onPreviewKeyEvent false
+
                             true
                         }
 
                         Key.DirectionDown -> {
-                            downFocus?.requestFocus() ?: return@onPreviewKeyEvent false
+                            downFocus?.requestFocus()
+                                ?: return@onPreviewKeyEvent false
+
                             true
                         }
 
@@ -244,10 +291,13 @@ private fun TvTextField(
                     MaterialTheme.colorScheme.surface
                 )
                 .border(
-                    width = 2.dp, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    width = 2.dp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 .padding(
-                    horizontal = 16.dp, vertical = 14.dp
-                ))
+                    horizontal = 16.dp,
+                    vertical = 14.dp
+                )
+        )
     }
 }

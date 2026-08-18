@@ -37,17 +37,28 @@ fun SkyWatchApp(
     logger: Logger, context: Context
 ) {
     val scope = rememberCoroutineScope()
+
     val persistenceManager = remember {
         ServerPersistenceManager(context)
     }
+
     val prefs = remember {
-        context.getSharedPreferences("skywatch_prefs", Context.MODE_PRIVATE)
+        context.getSharedPreferences(
+            "skywatch_prefs", Context.MODE_PRIVATE
+        )
     }
 
-    var screen by remember { mutableStateOf(Screen.HOME) }
+    var screen by remember {
+        mutableStateOf(Screen.HOME)
+    }
 
-    var showServerDialog by remember { mutableStateOf(false) }
-    var showScanDialog by remember { mutableStateOf(false) }
+    var showServerDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var showScanDialog by remember {
+        mutableStateOf(false)
+    }
 
     var cachedServers by remember {
         mutableStateOf<List<SmbServer>>(emptyList())
@@ -63,6 +74,14 @@ fun SkyWatchApp(
 
     var scanning by remember {
         mutableStateOf(false)
+    }
+
+    var scannedAddress by remember {
+        mutableStateOf("")
+    }
+
+    var scannedName by remember {
+        mutableStateOf("")
     }
 
     var selectedServer by remember {
@@ -81,24 +100,20 @@ fun SkyWatchApp(
         mutableStateOf<SmbClient?>(null)
     }
 
-    /*
-     * Load persisted servers once when the composable enters composition.
-     */
     LaunchedEffect(Unit) {
         cachedServers = withContext(Dispatchers.IO) {
             persistenceManager.getServers().map { it.server }
         }
     }
 
-    /*
-     * Connect to an SMB server.
-     */
     fun connect(input: ServerConnectionInput) {
         val server = SmbServer(
             name = input.name, ipAddress = input.address
         )
 
-        logger.info("Connecting to ${server.ipAddress}")
+        logger.info(
+            "Connecting to ${server.ipAddress}"
+        )
 
         scope.launch(Dispatchers.IO) {
             val client = SmbClient(logger)
@@ -114,22 +129,26 @@ fun SkyWatchApp(
 
                 val existingServers = persistenceManager.getServers()
 
-                if (existingServers.none { it.server.ipAddress == server.ipAddress }) {
+                if (existingServers.none {
+                        it.server.ipAddress == server.ipAddress
+                    }) {
                     persistenceManager.saveServer(saved)
                 }
+
                 val servers = persistenceManager.getServers()
 
                 withContext(Dispatchers.Main) {
-                    smbClient?.close()
-
                     smbClient = client
                     selectedServer = server
                     selectedShare = null
                     selectedFile = null
 
-                    cachedServers = servers.map { it.server }
+                    cachedServers = servers.map {
+                        it.server
+                    }
 
                     showServerDialog = false
+                    showScanDialog = false
                     screen = Screen.SHARES
                 }
             } catch (e: Exception) {
@@ -146,9 +165,7 @@ fun SkyWatchApp(
         }
     }
 
-    /*
-     * Connect using a previously saved server.
-     */
+
     fun selectServer(savedServer: SavedServer) {
         connect(
             ServerConnectionInput(
@@ -160,59 +177,49 @@ fun SkyWatchApp(
         )
     }
 
-    /*
-     * Scan the local network for SMB servers.
-     */
+
     fun scanNetwork() {
         if (scanning) {
             return
         }
 
+        showServerDialog = false
+        showScanDialog = true
+
         scanning = true
         scanError = null
+        scanResults = emptyList()
 
         scope.launch(Dispatchers.IO) {
             try {
                 logger.info("Starting SMB network scan")
 
-                val now = System.currentTimeMillis()
-                val cachedTimestamp = prefs.getLong("cached_servers_timestamp", 0)
+                val discoveredServers = SmbScanner().scanNetwork(logger)
 
-                val cacheValid = now - cachedTimestamp < 5 * 60 * 1000
-
-                val discoveredServers = if (cacheValid && cachedServers.isNotEmpty()) {
-                    logger.info("Using cached servers")
-                    cachedServers
-                } else {
-                    SmbScanner().scanNetwork(logger).also { servers ->
-                        servers.forEach { server ->
-                            logger.info(
-                                "Found server ${server.name} " + "with ip ${server.ipAddress}"
-                            )
-                        }
-
-                        logger.info(
-                            "Found ${servers.size} SMB servers"
-                        )
-                    }
+                discoveredServers.forEach { server ->
+                    logger.info(
+                        "Found server ${server.name} " + "with ip ${server.ipAddress}"
+                    )
                 }
 
-                /*
-                 * Also include saved servers.
-                 */
                 val savedServers = persistenceManager.getServers().map { it.server }
+                val savedIps = savedServers.map { it.ipAddress }.toSet()
+                val newServers = discoveredServers.distinctBy { it.ipAddress }
+                    .filter { it.ipAddress !in savedIps }
 
-                val uniqueServers = (discoveredServers + savedServers).distinctBy { it.ipAddress }
+                logger.info(
+                    "Found ${newServers.size} new SMB servers"
+                )
+
+                val results = newServers.map { server ->
+                    ScanResult(
+                        ip = server.ipAddress, name = server.name ?: server.ipAddress
+                    )
+                }
 
                 withContext(Dispatchers.Main) {
-                    cachedServers = uniqueServers
+                    scanResults = results
                     scanning = false
-
-                    if (!cacheValid) {
-                        prefs.edit().putLong(
-                            "cached_servers_timestamp", now
-                        ).apply()
-                    }
                 }
             } catch (e: Exception) {
                 logger.error(
@@ -227,15 +234,14 @@ fun SkyWatchApp(
         }
     }
 
-    /*
-     * Add a server without connecting to it.
-     */
     fun addServer(input: ServerConnectionInput) {
         val server = SmbServer(
             name = input.name, ipAddress = input.address
         )
 
-        logger.info("Adding server ${server.ipAddress}")
+        logger.info(
+            "Adding server ${server.ipAddress}"
+        )
 
         scope.launch(Dispatchers.IO) {
             try {
@@ -248,7 +254,9 @@ fun SkyWatchApp(
                 val servers = persistenceManager.getServers()
 
                 withContext(Dispatchers.Main) {
-                    cachedServers = servers.map { it.server }
+                    cachedServers = servers.map {
+                        it.server
+                    }
                 }
             } catch (e: Exception) {
                 logger.error(
@@ -258,9 +266,6 @@ fun SkyWatchApp(
         }
     }
 
-    /*
-     * Update an existing saved server.
-     */
     fun updateServer(
         input: ServerConnectionInput, oldServer: SmbServer
     ) {
@@ -268,7 +273,9 @@ fun SkyWatchApp(
             name = input.name, ipAddress = input.address
         )
 
-        logger.info("Updating server ${server.ipAddress}")
+        logger.info(
+            "Updating server ${server.ipAddress}"
+        )
 
         scope.launch(Dispatchers.IO) {
             try {
@@ -281,7 +288,9 @@ fun SkyWatchApp(
                 val servers = persistenceManager.getServers()
 
                 withContext(Dispatchers.Main) {
-                    cachedServers = servers.map { it.server }
+                    cachedServers = servers.map {
+                        it.server
+                    }
                 }
             } catch (e: Exception) {
                 logger.error(
@@ -291,20 +300,23 @@ fun SkyWatchApp(
         }
     }
 
-    /*
-     * Delete a saved server.
-     */
     fun deleteServer(server: SmbServer) {
-        logger.info("Deleting server ${server.ipAddress}")
+        logger.info(
+            "Deleting server ${server.ipAddress}"
+        )
 
         scope.launch(Dispatchers.IO) {
             try {
-                persistenceManager.deleteServer(server)
+                persistenceManager.deleteServer(
+                    server
+                )
 
                 val servers = persistenceManager.getServers()
 
                 withContext(Dispatchers.Main) {
-                    cachedServers = servers.map { it.server }
+                    cachedServers = servers.map {
+                        it.server
+                    }
                 }
             } catch (e: Exception) {
                 logger.error(
@@ -314,41 +326,50 @@ fun SkyWatchApp(
         }
     }
 
-    /*
-     * Handle Android back navigation.
-     */
     BackHandler(
-        enabled = screen != Screen.HOME
+        enabled = screen != Screen.HOME || showServerDialog || showScanDialog
     ) {
-        when (screen) {
-            Screen.PLAYER -> {
-                selectedFile = null
-                screen = Screen.BROWSER
+        when {
+            showScanDialog -> {
+                showScanDialog = false
+                showServerDialog = true
             }
 
-            Screen.BROWSER -> {
-                selectedShare = null
-                screen = Screen.SHARES
+            showServerDialog -> {
+                showServerDialog = false
             }
 
-            Screen.SHARES -> {
-                smbClient?.close()
-                smbClient = null
-                selectedServer = null
-                selectedShare = null
-                selectedFile = null
-                screen = Screen.HOME
-            }
+            else -> {
+                when (screen) {
+                    Screen.PLAYER -> {
+                        selectedFile = null
+                        screen = Screen.BROWSER
+                    }
 
-            Screen.HOME -> Unit
+                    Screen.BROWSER -> {
+                        selectedShare = null
+                        screen = Screen.SHARES
+                    }
+
+                    Screen.SHARES -> {
+                        scope.launch(Dispatchers.IO) {
+                            smbClient?.close()
+                        }
+
+                        smbClient = null
+                        selectedServer = null
+                        selectedShare = null
+                        selectedFile = null
+                        screen = Screen.HOME
+                    }
+
+                    Screen.HOME -> Unit
+                }
+            }
         }
     }
 
-    /*
-     * Screen navigation.
-     */
     when (screen) {
-
         Screen.HOME -> {
             val savedServers = persistenceManager.getServers()
 
@@ -356,7 +377,10 @@ fun SkyWatchApp(
                 savedServers = savedServers, error = scanError,
 
                 onServerClick = { savedServer ->
-                    logger.info("Saved server clicked")
+                    logger.info(
+                        "Saved server clicked"
+                    )
+
                     selectServer(savedServer)
                 },
 
@@ -365,21 +389,28 @@ fun SkyWatchApp(
                         "Edit server clicked: " + savedServer.server.ipAddress
                     )
 
-                    // TODO: Open edit dialog.
+                    // TODO: Open edit dialog
                 },
 
                 onAddServer = {
+                    scannedAddress = ""
+                    scannedName = ""
+                    scanError = null
                     showServerDialog = true
                 },
 
                 onDeleteServer = { savedServer ->
                     scope.launch(Dispatchers.IO) {
-                        persistenceManager.deleteServer(savedServer.server)
+                        persistenceManager.deleteServer(
+                            savedServer.server
+                        )
 
                         val servers = persistenceManager.getServers()
 
                         withContext(Dispatchers.Main) {
-                            cachedServers = servers.map { it.server }
+                            cachedServers = servers.map {
+                                it.server
+                            }
                         }
                     }
                 })
@@ -402,6 +433,7 @@ fun SkyWatchApp(
                         scope.launch(Dispatchers.IO) {
                             client.close()
                         }
+
                         smbClient = null
                         selectedServer = null
                         selectedShare = null
@@ -449,34 +481,32 @@ fun SkyWatchApp(
         }
     }
 
-    /*
-     * Add server dialog.
-     */
+
     if (showServerDialog) {
         ServerDialog(
             onDismiss = {
                 showServerDialog = false
-            }, onConnect = ::connect, onScan = ::scanNetwork
+            },
+
+            onConnect = ::connect,
+            onScan = ::scanNetwork,
+            initialAddress = scannedAddress,
+            initialName = scannedName
         )
     }
 
-    /*
-     * Network scan results.
-     */
-    if (showScanDialog && scanResults.isNotEmpty()) {
+    if (showScanDialog) {
         ScanDialog(
             onDismiss = {
                 showScanDialog = false
+                showServerDialog = true
             },
 
             onServerSelected = { result ->
-                addServer(
-                    ServerConnectionInput(
-                        name = result.name, address = result.ip, username = "", password = ""
-                    )
-                )
-
+                scannedAddress = result.ip
+                scannedName = result.name
                 showScanDialog = false
+                showServerDialog = true
             },
 
             servers = scanResults

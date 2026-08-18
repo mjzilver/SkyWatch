@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -68,7 +70,8 @@ fun FileBrowserScreen(
     }
 
     LaunchedEffect(
-        shareName, currentPath
+        shareName,
+        currentPath
     ) {
         loading = true
         error = null
@@ -80,7 +83,8 @@ fun FileBrowserScreen(
 
             withContext(Dispatchers.IO) {
                 entries = client.list(
-                    shareName = shareName, path = currentPath
+                    shareName = shareName,
+                    path = currentPath
                 )
             }
 
@@ -89,12 +93,14 @@ fun FileBrowserScreen(
             )
         } catch (e: Exception) {
             logger.error(
-                "Failed to list //$shareName/$currentPath", e
+                "Failed to list //$shareName/$currentPath",
+                e
             )
 
             entries = emptyList()
 
-            error = e.message ?: "Failed to load directory"
+            error = e.message
+                ?: "Failed to load directory"
         } finally {
             loading = false
         }
@@ -106,11 +112,13 @@ fun FileBrowserScreen(
             .padding(48.dp)
     ) {
         ScreenHeader(
-            title = shareName, subtitle = if (currentPath.isEmpty()) {
+            title = shareName,
+            subtitle = if (currentPath.isEmpty()) {
                 "/"
             } else {
                 "/$currentPath"
-            }, onBack = ::goBackDirectory
+            },
+            onBack = ::goBackDirectory
         )
 
         Spacer(
@@ -133,19 +141,24 @@ fun FileBrowserScreen(
             }
 
             else -> {
-                Column(
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    entries.forEach { entry ->
-
+                    items(
+                        items = entries,
+                        key = { entry -> entry.path }
+                    ) { entry ->
                         FileEntryButton(
-                            entry = entry, onClick = {
+                            entry = entry,
+                            onClick = {
                                 if (entry.isDirectory) {
                                     currentPath = entry.path
                                 } else {
                                     onFileSelected(entry)
                                 }
-                            })
+                            }
+                        )
                     }
                 }
             }
@@ -156,10 +169,12 @@ fun FileBrowserScreen(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun FileEntryButton(
-    entry: SmbEntry, onClick: () -> Unit
+    entry: SmbEntry,
+    onClick: () -> Unit
 ) {
     Button(
-        onClick = onClick, modifier = Modifier.fillMaxWidth()
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -188,7 +203,8 @@ private fun parentPath(
         ""
     } else {
         normalized.substring(
-            0, index
+            0,
+            index
         )
     }
 }
