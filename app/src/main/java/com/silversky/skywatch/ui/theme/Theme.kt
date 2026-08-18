@@ -10,29 +10,25 @@ import androidx.tv.material3.darkColorScheme
 fun SkyWatchTheme(
     content: @Composable () -> Unit,
 ) {
-    val colorScheme = darkColorScheme(
-        primary = White,
-        onPrimary = Black,
+  val colorScheme =
+      darkColorScheme(
+          primary = White,
+          onPrimary = Black,
+          secondary = LightGray,
+          onSecondary = Black,
+          tertiary = MediumGray,
+          onTertiary = White,
+          background = Black,
+          onBackground = White,
+          surface = DarkGray,
+          onSurface = White,
+          surfaceVariant = Gray,
+          onSurfaceVariant = LightGray,
+      )
 
-        secondary = LightGray,
-        onSecondary = Black,
-
-        tertiary = MediumGray,
-        onTertiary = White,
-
-        background = Black,
-        onBackground = White,
-
-        surface = DarkGray,
-        onSurface = White,
-
-        surfaceVariant = Gray,
-        onSurfaceVariant = LightGray,
-    )
-
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content,
-    )
+  MaterialTheme(
+      colorScheme = colorScheme,
+      typography = Typography,
+      content = content,
+  )
 }

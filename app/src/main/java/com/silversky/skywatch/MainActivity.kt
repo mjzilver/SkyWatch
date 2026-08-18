@@ -12,28 +12,24 @@ import com.silversky.skywatch.logger.AndroidLogger
 import com.silversky.skywatch.ui.theme.SkyWatchTheme
 
 class MainActivity : ComponentActivity() {
+  private val logger = AndroidLogger("SkyWatch")
 
-    private val logger =
-        AndroidLogger("SkyWatch")
+  @OptIn(ExperimentalTvMaterial3Api::class)
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
 
-    @OptIn(ExperimentalTvMaterial3Api::class)
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
-        super.onCreate(savedInstanceState)
-
-        setContent {
-            SkyWatchTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    shape = RectangleShape
-                ) {
-                    SkyWatchApp(
-                        logger = logger,
-                        context = this@MainActivity
-                    )
-                }
-            }
+    setContent {
+      SkyWatchTheme {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            shape = RectangleShape,
+        ) {
+          SkyWatchApp(
+              logger = logger,
+              context = this@MainActivity,
+          )
         }
+      }
     }
+  }
 }

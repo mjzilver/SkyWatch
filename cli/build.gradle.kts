@@ -1,27 +1,27 @@
 plugins {
-    application
-    alias(libs.plugins.jetbrains.kotlin.jvm)
+  application
+  alias(libs.plugins.jetbrains.kotlin.jvm)
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+  sourceCompatibility = JavaVersion.VERSION_11
+  targetCompatibility = JavaVersion.VERSION_11
 }
 
 kotlin {
-    compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
-    }
+  compilerOptions {
+    jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+  }
 }
 
 application {
-    mainClass.set("com.silversky.cli.MainKt")
+  mainClass.set("com.silversky.cli.MainKt")
 }
 
 tasks.named<JavaExec>("run") {
-    standardInput = System.`in`
+  standardInput = System.`in`
 }
 
 dependencies {
-    implementation(project(":core"))
+  implementation(project(":core"))
 }

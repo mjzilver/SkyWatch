@@ -35,7 +35,7 @@ data class ServerConnectionInput(
     val name: String?,
     val address: String,
     val username: String,
-    val password: String
+    val password: String,
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -45,189 +45,157 @@ fun ServerDialog(
     onConnect: (ServerConnectionInput) -> Unit,
     onScan: () -> Unit,
     initialAddress: String = "",
-    initialName: String = ""
+    initialName: String = "",
+    initialUsername: String = "",
+    initialPassword: String = "",
+    isEditing: Boolean = false,
 ) {
-    var name by remember(initialName) {
+  var name by
+      remember(initialName) {
         mutableStateOf(initialName)
-    }
+      }
 
-    var address by remember(initialAddress) {
+  var address by
+      remember(initialAddress) {
         mutableStateOf(initialAddress)
-    }
+      }
 
-    var username by remember {
-        mutableStateOf("")
-    }
+  var username by
+      remember(initialUsername) {
+        mutableStateOf(initialUsername)
+      }
 
-    var password by remember {
-        mutableStateOf("")
-    }
+  var password by
+      remember(initialPassword) {
+        mutableStateOf(initialPassword)
+      }
 
-    val nameFocus = remember {
-        FocusRequester()
-    }
+  val nameFocus = remember { FocusRequester() }
+  val addressFocus = remember { FocusRequester() }
+  val usernameFocus = remember { FocusRequester() }
+  val passwordFocus = remember { FocusRequester() }
+  val scanFocus = remember { FocusRequester() }
+  val connectFocus = remember { FocusRequester() }
 
-    val addressFocus = remember {
-        FocusRequester()
-    }
-
-    val usernameFocus = remember {
-        FocusRequester()
-    }
-
-    val passwordFocus = remember {
-        FocusRequester()
-    }
-
-    val scanFocus = remember {
-        FocusRequester()
-    }
-
-    val connectFocus = remember {
-        FocusRequester()
-    }
-
-    Dialog(
-        onDismissRequest = onDismiss
+  Dialog(onDismissRequest = onDismiss) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(32.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+      Text(
+          text = if (isEditing) "Edit SMB Server" else "Add SMB Server",
+          style = MaterialTheme.typography.headlineSmall,
+      )
+
+      Spacer(modifier = Modifier.height(8.dp))
+
+      TvTextField(
+          value = name,
+          onValueChange = { name = it },
+          label = "Name",
+          focusRequester = nameFocus,
+          upFocus = null,
+          downFocus = addressFocus,
+      )
+
+      TvTextField(
+          value = address,
+          onValueChange = { address = it },
+          label = "IP address",
+          focusRequester = addressFocus,
+          upFocus = nameFocus,
+          downFocus = usernameFocus,
+      )
+
+      TvTextField(
+          value = username,
+          onValueChange = { username = it },
+          label = "Username",
+          focusRequester = usernameFocus,
+          upFocus = addressFocus,
+          downFocus = passwordFocus,
+      )
+
+      TvTextField(
+          value = password,
+          onValueChange = { password = it },
+          label = "Password",
+          focusRequester = passwordFocus,
+          upFocus = usernameFocus,
+          downFocus = scanFocus,
+      )
+
+      Spacer(modifier = Modifier.height(8.dp))
+
+      Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(12.dp),
+      ) {
+        Button(
+            onClick = {
+              if (address.isNotBlank()) {
+                onConnect(
+                    ServerConnectionInput(
+                        name = name.ifBlank { null },
+                        address = address.trim(),
+                        username = username,
+                        password = password,
+                    )
+                )
+              }
+            },
+            modifier =
+                Modifier.weight(1f).focusRequester(connectFocus).onPreviewKeyEvent { event ->
+                  if (event.type != KeyEventType.KeyDown) {
+                    return@onPreviewKeyEvent false
+                  }
+
+                  when (event.key) {
+                    Key.DirectionUp -> {
+                      passwordFocus.requestFocus()
+                      true
+                    }
+
+                    Key.DirectionLeft -> {
+                      scanFocus.requestFocus()
+                      true
+                    }
+
+                    else -> false
+                  }
+                },
         ) {
-            Text(
-                text = "Add SMB Server",
-                style = MaterialTheme.typography.headlineSmall
-            )
-
-            Spacer(
-                modifier = Modifier.height(8.dp)
-            )
-
-            TvTextField(
-                value = name,
-                onValueChange = {
-                    name = it
-                },
-                label = "Name",
-                focusRequester = nameFocus,
-                upFocus = null,
-                downFocus = addressFocus
-            )
-
-            TvTextField(
-                value = address,
-                onValueChange = {
-                    address = it
-                },
-                label = "IP address",
-                focusRequester = addressFocus,
-                upFocus = nameFocus,
-                downFocus = usernameFocus
-            )
-
-            TvTextField(
-                value = username,
-                onValueChange = {
-                    username = it
-                },
-                label = "Username",
-                focusRequester = usernameFocus,
-                upFocus = addressFocus,
-                downFocus = passwordFocus
-            )
-
-            TvTextField(
-                value = password,
-                onValueChange = {
-                    password = it
-                },
-                label = "Password",
-                focusRequester = passwordFocus,
-                upFocus = usernameFocus,
-                downFocus = scanFocus
-            )
-
-            Spacer(
-                modifier = Modifier.height(8.dp)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = onScan,
-                    modifier = Modifier
-                        .weight(1f)
-                        .focusRequester(scanFocus)
-                        .onPreviewKeyEvent { event ->
-                            if (event.type != KeyEventType.KeyDown) {
-                                return@onPreviewKeyEvent false
-                            }
-
-                            when (event.key) {
-                                Key.DirectionUp -> {
-                                    passwordFocus.requestFocus()
-                                    true
-                                }
-
-                                Key.DirectionRight -> {
-                                    connectFocus.requestFocus()
-                                    true
-                                }
-
-                                else -> false
-                            }
-                        }
-                ) {
-                    Text("Scan Network")
-                }
-
-                Button(
-                    onClick = {
-                        if (address.isNotBlank()) {
-                            onConnect(
-                                ServerConnectionInput(
-                                    name = name.ifBlank {
-                                        null
-                                    },
-                                    address = address.trim(),
-                                    username = username,
-                                    password = password
-                                )
-                            )
-                        }
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .focusRequester(connectFocus)
-                        .onPreviewKeyEvent { event ->
-                            if (event.type != KeyEventType.KeyDown) {
-                                return@onPreviewKeyEvent false
-                            }
-
-                            when (event.key) {
-                                Key.DirectionUp -> {
-                                    passwordFocus.requestFocus()
-                                    true
-                                }
-
-                                Key.DirectionLeft -> {
-                                    scanFocus.requestFocus()
-                                    true
-                                }
-
-                                else -> false
-                            }
-                        }
-                ) {
-                    Text("Connect")
-                }
-            }
+          Text(if (isEditing) "Save" else "Connect")
         }
+
+        Button(
+            onClick = onScan,
+            modifier =
+                Modifier.weight(1f).focusRequester(scanFocus).onPreviewKeyEvent { event ->
+                  if (event.type != KeyEventType.KeyDown) {
+                    return@onPreviewKeyEvent false
+                  }
+
+                  when (event.key) {
+                    Key.DirectionUp -> {
+                      passwordFocus.requestFocus()
+                      true
+                    }
+
+                    Key.DirectionRight -> {
+                      connectFocus.requestFocus()
+                      true
+                    }
+
+                    else -> false
+                  }
+                },
+        ) {
+          Text("Scan Network")
+        }
+      }
     }
+  }
 }
 
 @Composable
@@ -237,67 +205,56 @@ private fun TvTextField(
     label: String,
     focusRequester: FocusRequester,
     upFocus: FocusRequester?,
-    downFocus: FocusRequester?
+    downFocus: FocusRequester?,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge
-        )
+  Column(modifier = Modifier.fillMaxWidth()) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelLarge,
+    )
 
-        Spacer(
-            modifier = Modifier.height(6.dp)
-        )
+    Spacer(modifier = Modifier.height(6.dp))
 
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = true,
-            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                color = MaterialTheme.colorScheme.onSurface
-            ),
-            cursorBrush = SolidColor(
-                MaterialTheme.colorScheme.primary
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        textStyle =
+            MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        modifier =
+            Modifier.fillMaxWidth()
                 .focusRequester(focusRequester)
                 .onPreviewKeyEvent { event ->
-                    if (event.type != KeyEventType.KeyDown) {
-                        return@onPreviewKeyEvent false
+                  if (event.type != KeyEventType.KeyDown) {
+                    return@onPreviewKeyEvent false
+                  }
+
+                  when (event.key) {
+                    Key.DirectionUp -> {
+                      upFocus?.requestFocus() ?: return@onPreviewKeyEvent false
+
+                      true
                     }
 
-                    when (event.key) {
-                        Key.DirectionUp -> {
-                            upFocus?.requestFocus()
-                                ?: return@onPreviewKeyEvent false
+                    Key.DirectionDown -> {
+                      downFocus?.requestFocus() ?: return@onPreviewKeyEvent false
 
-                            true
-                        }
-
-                        Key.DirectionDown -> {
-                            downFocus?.requestFocus()
-                                ?: return@onPreviewKeyEvent false
-
-                            true
-                        }
-
-                        else -> false
+                      true
                     }
+
+                    else -> false
+                  }
                 }
-                .background(
-                    MaterialTheme.colorScheme.surface
-                )
+                .background(MaterialTheme.colorScheme.surface)
                 .border(
                     width = 2.dp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 .padding(
                     horizontal = 16.dp,
-                    vertical = 14.dp
-                )
-        )
-    }
+                    vertical = 14.dp,
+                ),
+    )
+  }
 }

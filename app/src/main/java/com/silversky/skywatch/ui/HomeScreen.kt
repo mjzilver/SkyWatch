@@ -29,98 +29,93 @@ fun HomeScreen(
     onAddServer: () -> Unit,
     onDeleteServer: (SavedServer) -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(
-                horizontal = 72.dp, vertical = 48.dp
-            ), verticalArrangement = Arrangement.spacedBy(32.dp)
-    ) {
-        // Header
-        Column {
-            Text(
-                text = "SKYWATCH", style = MaterialTheme.typography.headlineLarge
-            )
+  Column(
+      modifier =
+          Modifier.fillMaxSize()
+              .padding(
+                  horizontal = 72.dp,
+                  vertical = 48.dp,
+              ),
+      verticalArrangement = Arrangement.spacedBy(32.dp),
+  ) {
+    Column {
+      Text(
+          text = "SKYWATCH",
+          style = MaterialTheme.typography.headlineLarge,
+      )
 
-            Text(
-                text = "SMB MEDIA PLAYER", style = MaterialTheme.typography.bodyLarge
-            )
-        }
-
-        // Add button
-        Button(
-            onClick = onAddServer
-        ) {
-            Text("Add Server")
-        }
-
-        // Error
-        error?.let {
-            Text(
-                text = it, style = MaterialTheme.typography.bodyLarge
-            )
-        }
-
-        // Saved servers
-        Column {
-            Text(
-                text = "Saved Servers", style = MaterialTheme.typography.titleLarge
-            )
-
-            Spacer(
-                modifier = Modifier.height(12.dp)
-            )
-
-            if (savedServers.isEmpty()) {
-                Text(
-                    text = "No saved servers"
-                )
-            } else {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    savedServers.forEach { server ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Button(
-                                onClick = {
-                                    onServerClick(server)
-                                }, modifier = Modifier.weight(1f)
-                            ) {
-                                Column {
-                                    Text(
-                                        server.server.name ?: server.server.ipAddress
-                                    )
-
-                                    Text(
-                                        server.server.ipAddress,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                            }
-
-                            Button(
-                                onClick = {
-                                    onEditServer(server)
-                                }, modifier = Modifier.width(80.dp)
-                            ) {
-                                Text("Edit")
-                            }
-
-                            Button(
-                                onClick = {
-                                    onDeleteServer(server)
-                                }, modifier = Modifier.width(80.dp)
-                            ) {
-                                Text("Delete")
-                            }
-                        }
-                    }
-                }
-            }
-        }
+      Text(
+          text = "SMB MEDIA PLAYER",
+          style = MaterialTheme.typography.bodyLarge,
+      )
     }
+
+    Button(onClick = onAddServer) {
+      Text("Add Server")
+    }
+
+    error?.let {
+      Text(
+          text = it,
+          style = MaterialTheme.typography.bodyLarge,
+      )
+    }
+
+    Column {
+      Text(
+          text = "Saved Servers",
+          style = MaterialTheme.typography.titleLarge,
+      )
+
+      Spacer(modifier = Modifier.height(12.dp))
+
+      if (savedServers.isEmpty()) {
+        Text(text = "No saved servers")
+      } else {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          savedServers.forEach { server ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+              Button(
+                  onClick = {
+                    onServerClick(server)
+                  },
+                  modifier = Modifier.weight(1f),
+              ) {
+                Column {
+                  Text(server.server.name ?: server.server.ipAddress)
+
+                  Text(
+                      server.server.ipAddress,
+                      style = MaterialTheme.typography.bodySmall,
+                  )
+                }
+              }
+
+              Button(
+                  onClick = {
+                    onEditServer(server)
+                  },
+                  modifier = Modifier.width(80.dp),
+              ) {
+                Text("Edit")
+              }
+
+              Button(
+                  onClick = {
+                    onDeleteServer(server)
+                  },
+                  modifier = Modifier.width(80.dp),
+              ) {
+                Text("Delete")
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }

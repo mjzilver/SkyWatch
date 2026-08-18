@@ -38,173 +38,161 @@ fun FileBrowserScreen(
     shareName: String,
     logger: Logger,
     onFileSelected: (SmbEntry) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
-    var currentPath by remember {
-        mutableStateOf("")
+  var currentPath by remember {
+    mutableStateOf("")
+  }
+
+  var entries by remember {
+    mutableStateOf<List<SmbEntry>>(emptyList())
+  }
+
+  var loading by remember {
+    mutableStateOf(true)
+  }
+
+  var error by remember {
+    mutableStateOf<String?>(null)
+  }
+
+  fun goBackDirectory() {
+    if (currentPath.isEmpty()) {
+      onBack()
+      return
     }
 
-    var entries by remember {
-        mutableStateOf<List<SmbEntry>>(emptyList())
-    }
+    currentPath = parentPath(currentPath)
+  }
 
-    var loading by remember {
-        mutableStateOf(true)
-    }
+  BackHandler {
+    goBackDirectory()
+  }
 
-    var error by remember {
-        mutableStateOf<String?>(null)
-    }
+  LaunchedEffect(
+      shareName,
+      currentPath,
+  ) {
+    loading = true
+    error = null
 
-    fun goBackDirectory() {
-        if (currentPath.isEmpty()) {
-            onBack()
-            return
-        }
+    try {
+      logger.debug("Listing //$shareName/$currentPath")
 
-        currentPath = parentPath(currentPath)
-    }
-
-    BackHandler {
-        goBackDirectory()
-    }
-
-    LaunchedEffect(
-        shareName,
-        currentPath
-    ) {
-        loading = true
-        error = null
-
-        try {
-            logger.debug(
-                "Listing //$shareName/$currentPath"
+      withContext(Dispatchers.IO) {
+        entries =
+            client.list(
+                shareName = shareName,
+                path = currentPath,
             )
+      }
 
-            withContext(Dispatchers.IO) {
-                entries = client.list(
-                    shareName = shareName,
-                    path = currentPath
-                )
-            }
+      logger.debug("Found ${entries.size} entries")
+    } catch (e: Exception) {
+      logger.error(
+          "Failed to list //$shareName/$currentPath",
+          e,
+      )
 
-            logger.debug(
-                "Found ${entries.size} entries"
-            )
-        } catch (e: Exception) {
-            logger.error(
-                "Failed to list //$shareName/$currentPath",
-                e
-            )
+      entries = emptyList()
 
-            entries = emptyList()
-
-            error = e.message
-                ?: "Failed to load directory"
-        } finally {
-            loading = false
-        }
+      error = e.message ?: "Failed to load directory"
+    } finally {
+      loading = false
     }
+  }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(48.dp)
-    ) {
-        ScreenHeader(
-            title = shareName,
-            subtitle = if (currentPath.isEmpty()) {
-                "/"
+  Column(modifier = Modifier.fillMaxSize().padding(48.dp)) {
+    ScreenHeader(
+        title = shareName,
+        subtitle =
+            if (currentPath.isEmpty()) {
+              "/"
             } else {
-                "/$currentPath"
+              "/$currentPath"
             },
-            onBack = ::goBackDirectory
-        )
+        onBack = ::goBackDirectory,
+    )
 
-        Spacer(
-            modifier = Modifier.height(32.dp)
-        )
+    Spacer(modifier = Modifier.height(32.dp))
 
-        when {
-            loading -> {
-                LoadingMessage()
-            }
+    when {
+      loading -> {
+        LoadingMessage()
+      }
 
-            error != null -> {
-                ErrorMessage(error!!)
-            }
+      error != null -> {
+        ErrorMessage(error!!)
+      }
 
-            entries.isEmpty() -> {
-                EmptyMessage(
-                    "This folder is empty."
-                )
-            }
+      entries.isEmpty() -> {
+        EmptyMessage("This folder is empty.")
+      }
 
-            else -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(
-                        items = entries,
-                        key = { entry -> entry.path }
-                    ) { entry ->
-                        FileEntryButton(
-                            entry = entry,
-                            onClick = {
-                                if (entry.isDirectory) {
-                                    currentPath = entry.path
-                                } else {
-                                    onFileSelected(entry)
-                                }
-                            }
-                        )
-                    }
-                }
-            }
+      else -> {
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+          items(
+              items = entries,
+              key = { entry -> entry.path },
+          ) { entry ->
+            FileEntryButton(
+                entry = entry,
+                onClick = {
+                  if (entry.isDirectory) {
+                    currentPath = entry.path
+                  } else {
+                    onFileSelected(entry)
+                  }
+                },
+            )
+          }
         }
+      }
     }
+  }
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun FileEntryButton(
     entry: SmbEntry,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
+  Button(
+      onClick = onClick,
+      modifier = Modifier.fillMaxWidth(),
+  ) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = if (entry.isDirectory) {
-                    "📁  ${entry.name}"
-                } else {
-                    "▶  ${entry.name}"
-                }
-            )
-        }
+      Text(
+          text =
+              if (entry.isDirectory) {
+                "📁  ${entry.name}"
+              } else {
+                "▶  ${entry.name}"
+              }
+      )
     }
+  }
 }
 
-private fun parentPath(
-    path: String
-): String {
-    val normalized = path.trimEnd('\\')
+private fun parentPath(path: String): String {
+  val normalized = path.trimEnd('\\')
 
-    val index = normalized.lastIndexOf('\\')
+  val index = normalized.lastIndexOf('\\')
 
-    return if (index < 0) {
-        ""
-    } else {
-        normalized.substring(
-            0,
-            index
-        )
-    }
+  return if (index < 0) {
+    ""
+  } else {
+    normalized.substring(
+        0,
+        index,
+    )
+  }
 }

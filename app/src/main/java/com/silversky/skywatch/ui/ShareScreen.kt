@@ -31,94 +31,80 @@ fun ShareScreen(
     server: SmbServer,
     logger: Logger,
     onShareSelected: (String) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
-    var shares by remember {
-        mutableStateOf<List<String>>(emptyList())
+  var shares by remember {
+    mutableStateOf<List<String>>(emptyList())
+  }
+
+  var loading by remember {
+    mutableStateOf(true)
+  }
+
+  var error by remember {
+    mutableStateOf<String?>(null)
+  }
+
+  LaunchedEffect(Unit) {
+    try {
+      logger.debug("Loading shares from ${server.ipAddress}")
+
+      shares =
+          withContext(Dispatchers.IO) {
+            client.listShares()
+          }
+
+      logger.info("Found ${shares.size} shares")
+    } catch (e: Exception) {
+      logger.error(
+          "Failed to list SMB shares",
+          e,
+      )
+
+      error = e.message ?: "Failed to load shares"
+    } finally {
+      loading = false
     }
+  }
 
-    var loading by remember {
-        mutableStateOf(true)
-    }
+  Column(modifier = Modifier.fillMaxSize().padding(48.dp)) {
+    ScreenHeader(
+        title = server.name ?: server.ipAddress,
+        subtitle = "Select a share",
+        onBack = onBack,
+    )
 
-    var error by remember {
-        mutableStateOf<String?>(null)
-    }
+    Spacer(modifier = Modifier.height(32.dp))
 
-    LaunchedEffect(Unit) {
-        try {
-            logger.debug(
-                "Loading shares from ${server.ipAddress}"
-            )
+    when {
+      loading -> {
+        LoadingMessage("Loading shares...")
+      }
 
-            shares = withContext(Dispatchers.IO) {
-                client.listShares()
+      error != null -> {
+        ErrorMessage(error!!)
+      }
+
+      shares.isEmpty() -> {
+        EmptyMessage("No SMB shares found.")
+      }
+
+      else -> {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          shares.forEach { share ->
+            Button(
+                onClick = {
+                  logger.info("Selected share: $share")
+
+                  onShareSelected(share)
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+              Text("📁  $share")
             }
-
-            logger.info(
-                "Found ${shares.size} shares"
-            )
-        } catch (e: Exception) {
-            logger.error(
-                "Failed to list SMB shares", e
-            )
-
-            error = e.message ?: "Failed to load shares"
-        } finally {
-            loading = false
+          }
         }
+      }
     }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(48.dp)
-    ) {
-        ScreenHeader(
-            title = server.name ?: server.ipAddress, subtitle = "Select a share", onBack = onBack
-        )
-
-        Spacer(
-            modifier = Modifier.height(32.dp)
-        )
-
-        when {
-            loading -> {
-                LoadingMessage(
-                    "Loading shares..."
-                )
-            }
-
-            error != null -> {
-                ErrorMessage(error!!)
-            }
-
-            shares.isEmpty() -> {
-                EmptyMessage(
-                    "No SMB shares found."
-                )
-            }
-
-            else -> {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    shares.forEach { share ->
-
-                        Button(
-                            onClick = {
-                                logger.info(
-                                    "Selected share: $share"
-                                )
-
-                                onShareSelected(share)
-                            }, modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("📁  $share")
-                        }
-                    }
-                }
-            }
-        }
-    }
+  }
 }

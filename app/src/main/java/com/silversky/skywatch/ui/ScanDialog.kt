@@ -35,7 +35,7 @@ import androidx.tv.material3.Text
 
 data class ScanResult(
     val ip: String,
-    val name: String
+    val name: String,
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -43,134 +43,119 @@ data class ScanResult(
 fun ScanDialog(
     onDismiss: () -> Unit,
     onServerSelected: (ScanResult) -> Unit,
-    servers: List<ScanResult>
+    servers: List<ScanResult>,
 ) {
-    var selectedServer by remember(servers) {
+  var selectedServer by
+      remember(servers) {
         mutableStateOf(servers.firstOrNull())
-    }
+      }
 
-    val selectFocus = remember {
-        FocusRequester()
-    }
+  val selectFocus = remember {
+    FocusRequester()
+  }
 
-    val cancelFocus = remember {
-        FocusRequester()
-    }
+  val cancelFocus = remember {
+    FocusRequester()
+  }
 
-    Dialog(
-        onDismissRequest = onDismiss
+  Dialog(onDismissRequest = onDismiss) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(32.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "Scan Results",
-                style = MaterialTheme.typography.headlineSmall
+      Text(
+          text = "Scan Results",
+          style = MaterialTheme.typography.headlineSmall,
+      )
+
+      Spacer(modifier = Modifier.height(8.dp))
+
+      LazyColumn(modifier = Modifier.fillMaxWidth().selectableGroup()) {
+        items(servers) { server ->
+          Row(
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .clickable {
+                        selectedServer = server
+                      }
+                      .padding(8.dp),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(12.dp),
+          ) {
+            RadioButton(
+                selected = selectedServer?.ip == server.ip,
+                onClick = {
+                  selectedServer = server
+                },
             )
 
-            Spacer(
-                modifier = Modifier.height(8.dp)
-            )
+            Column {
+              Text(
+                  text = server.name,
+                  style = MaterialTheme.typography.bodyLarge,
+              )
 
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .selectableGroup()
-            ) {
-                items(servers) { server ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                selectedServer = server
-                            }
-                            .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        RadioButton(
-                            selected = selectedServer?.ip == server.ip,
-                            onClick = {
-                                selectedServer = server
-                            }
-                        )
-
-                        Column {
-                            Text(
-                                text = server.name,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-
-                            Text(
-                                text = server.ip,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                }
+              Text(
+                  text = server.ip,
+                  style = MaterialTheme.typography.bodyMedium,
+              )
             }
-
-            Spacer(
-                modifier = Modifier.height(8.dp)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = onDismiss,
-                    modifier = Modifier
-                        .weight(1f)
-                        .focusRequester(cancelFocus)
-                        .onPreviewKeyEvent { event ->
-                            if (event.type != KeyEventType.KeyDown) {
-                                return@onPreviewKeyEvent false
-                            }
-
-                            when (event.key) {
-                                Key.DirectionRight -> {
-                                    selectFocus.requestFocus()
-                                    true
-                                }
-
-                                else -> false
-                            }
-                        }
-                ) {
-                    Text("Cancel")
-                }
-
-                Button(
-                    onClick = {
-                        selectedServer?.let {
-                            onServerSelected(it)
-                        }
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .focusRequester(selectFocus)
-                        .onPreviewKeyEvent { event ->
-                            if (event.type != KeyEventType.KeyDown) {
-                                return@onPreviewKeyEvent false
-                            }
-
-                            when (event.key) {
-                                Key.DirectionLeft -> {
-                                    cancelFocus.requestFocus()
-                                    true
-                                }
-
-                                else -> false
-                            }
-                        }
-                ) {
-                    Text("Select")
-                }
-            }
+          }
         }
+      }
+
+      Spacer(modifier = Modifier.height(8.dp))
+
+      Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(12.dp),
+      ) {
+        Button(
+            onClick = onDismiss,
+            modifier =
+                Modifier.weight(1f).focusRequester(cancelFocus).onPreviewKeyEvent { event ->
+                  if (event.type != KeyEventType.KeyDown) {
+                    return@onPreviewKeyEvent false
+                  }
+
+                  when (event.key) {
+                    Key.DirectionRight -> {
+                      selectFocus.requestFocus()
+                      true
+                    }
+
+                    else -> false
+                  }
+                },
+        ) {
+          Text("Cancel")
+        }
+
+        Button(
+            onClick = {
+              selectedServer?.let {
+                onServerSelected(it)
+              }
+            },
+            modifier =
+                Modifier.weight(1f).focusRequester(selectFocus).onPreviewKeyEvent { event ->
+                  if (event.type != KeyEventType.KeyDown) {
+                    return@onPreviewKeyEvent false
+                  }
+
+                  when (event.key) {
+                    Key.DirectionLeft -> {
+                      cancelFocus.requestFocus()
+                      true
+                    }
+
+                    else -> false
+                  }
+                },
+        ) {
+          Text("Select")
+        }
+      }
     }
+  }
 }

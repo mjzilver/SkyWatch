@@ -5,5 +5,5 @@ import com.silversky.core.smb.SmbServer
 data class SavedServer(
     val server: SmbServer,
     val username: String = "",
-    val password: String = ""
+    val password: String = "",
 )
