@@ -25,9 +25,13 @@ import java.util.EnumSet
 import java.util.concurrent.ExecutionException
 
 class SmbClient(private val logger: Logger) : AutoCloseable {
-  private val client = SMBClient(SmbConfig.builder().withReadBufferSize(1024 * 1024).withSecurityProvider(
-      JceSecurityProvider()
-  ).build())
+  private val client =
+      SMBClient(
+          SmbConfig.builder()
+              .withReadBufferSize(1024 * 1024)
+              .withSecurityProvider(JceSecurityProvider())
+              .build()
+      )
   private val connectionLock = Any()
 
   var server: SmbServer? = null
