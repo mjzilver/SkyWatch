@@ -38,7 +38,6 @@ class SmbDataSource(
     transferInitializing(dataSpec)
 
     closed = false
-
     currentUri = dataSpec.uri
 
     shareName = dataSpec.uri.host ?: throw IllegalArgumentException("SMB URI has no share name")
@@ -81,7 +80,7 @@ class SmbDataSource(
       return 0
     }
 
-    if (remaining <= 0L || closed) {
+    if (closed || remaining <= 0L) {
       return C.RESULT_END_OF_INPUT
     }
 
@@ -89,9 +88,7 @@ class SmbDataSource(
 
     while (totalRead < length && remaining > 0L && !closed) {
       if (bufferPosition >= bufferLength) {
-        fillBuffer()
-
-        if (closed) {
+        if (!fillBuffer()) {
           return if (totalRead > 0) {
             totalRead
           } else {
@@ -137,43 +134,92 @@ class SmbDataSource(
     return totalRead
   }
 
-  private fun fillBuffer() {
+  private fun fillBuffer(): Boolean {
     if (closed) {
-      return
+      return false
     }
 
     val currentFile = file ?: throw IllegalStateException("SMB file is not open")
-
     val readPosition = position
 
-    val bytesRead =
-        try {
-          currentFile.read(
-              filePosition = readPosition,
-              buffer = buffer,
-              bufferOffset = 0,
-              length = buffer.size,
-          )
-        } catch (e: Exception) {
-          if (closed || isInterrupted(e)) {
-            logger.debug("SMB READ CANCELLED: position=$readPosition")
-            return
+    val fillStartNanos = System.nanoTime()
+    var totalRead = 0
+
+    while (totalRead < buffer.size && !closed) {
+      val startNanos = System.nanoTime()
+
+      val bytesRead =
+          try {
+            currentFile.read(
+                filePosition = readPosition + totalRead,
+                buffer = buffer,
+                bufferOffset = totalRead,
+                length = buffer.size - totalRead,
+            )
+          } catch (e: Exception) {
+            val elapsedMs = (System.nanoTime() - startNanos) / 1_000_000
+
+            if (closed || isInterrupted(e)) {
+              logger.debug(
+                  "SMB READ CANCELLED: position=${readPosition + totalRead} " +
+                      "elapsed=${elapsedMs}ms"
+              )
+              return false
+            }
+
+            logger.error(
+                "SMB READ FAILED: position=${readPosition + totalRead} " + "elapsed=${elapsedMs}ms",
+                e,
+            )
+
+            throw e
           }
 
-          logger.error(
-              "SMB READ FAILED: position=$readPosition",
-              e,
-          )
+      if (bytesRead <= 0) {
+        break
+      }
 
-          throw e
-        }
+      totalRead += bytesRead
 
-    if (closed) {
-      return
+      val elapsedMs = (System.nanoTime() - startNanos) / 1_000_000
+      val speed =
+          if (elapsedMs > 0) {
+            bytesRead / 1024.0 / 1024.0 / (elapsedMs / 1000.0)
+          } else {
+            0.0
+          }
+
+      logger.debug(
+          "SMB READ: position=${readPosition + totalRead - bytesRead} " +
+              "bytes=$bytesRead " +
+              "elapsed=${elapsedMs}ms " +
+              "speed=%.2f MB/s".format(speed)
+      )
     }
 
+    if (closed) {
+      return false
+    }
+
+    val totalElapsedMs = (System.nanoTime() - fillStartNanos) / 1_000_000
+    val totalSpeed =
+        if (totalElapsedMs > 0) {
+          totalRead / 1024.0 / 1024.0 / (totalElapsedMs / 1000.0)
+        } else {
+          0.0
+        }
+
+    logger.debug(
+        "SMB FILL: position=$readPosition " +
+            "bytes=$totalRead " +
+            "elapsed=${totalElapsedMs}ms " +
+            "speed=%.2f MB/s".format(totalSpeed)
+    )
+
     bufferPosition = 0
-    bufferLength = bytesRead.coerceAtLeast(0)
+    bufferLength = totalRead
+
+    return totalRead > 0
   }
 
   private fun isInterrupted(error: Throwable): Boolean {
