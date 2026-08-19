@@ -7,6 +7,7 @@ import com.hierynomus.mssmb2.SMB2CreateDisposition
 import com.hierynomus.mssmb2.SMB2CreateOptions
 import com.hierynomus.mssmb2.SMB2ShareAccess
 import com.hierynomus.protocol.commons.EnumWithValue
+import com.hierynomus.security.jce.JceSecurityProvider
 import com.hierynomus.smbj.SMBClient
 import com.hierynomus.smbj.SmbConfig
 import com.hierynomus.smbj.auth.AuthenticationContext
@@ -24,7 +25,9 @@ import java.util.EnumSet
 import java.util.concurrent.ExecutionException
 
 class SmbClient(private val logger: Logger) : AutoCloseable {
-  private val client = SMBClient(SmbConfig.builder().withReadBufferSize(8 * 1024 * 1024).build())
+  private val client = SMBClient(SmbConfig.builder().withReadBufferSize(1024 * 1024).withSecurityProvider(
+      JceSecurityProvider()
+  ).build())
   private val connectionLock = Any()
 
   var server: SmbServer? = null

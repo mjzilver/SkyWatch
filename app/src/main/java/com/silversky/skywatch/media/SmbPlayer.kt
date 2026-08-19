@@ -83,13 +83,13 @@ fun createSmbPlayer(context: Context): ExoPlayer {
   val loadControl =
       DefaultLoadControl.Builder()
           .setBufferDurationsMs(
-              30_000,
-              120_000,
-              3_000,
-              5_000,
+              5_000, // min buffer
+              15_000, // max buffer
+              1_500, // playback start
+              3_000, // rebuffer start
           )
-          .setTargetBufferBytes(256 * 1024 * 1024)
-          .setPrioritizeTimeOverSizeThresholds(true)
+          .setTargetBufferBytes(32 * 1024 * 1024)
+          .setPrioritizeTimeOverSizeThresholds(false)
           .build()
 
   return ExoPlayer.Builder(context)

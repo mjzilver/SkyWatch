@@ -16,7 +16,7 @@ class SmbDataSource(
 ) : BaseDataSource(false) {
 
   companion object {
-    private const val BUFFER_SIZE = 8 * 1024 * 1024
+    private const val BUFFER_SIZE = 1024 * 1024
   }
 
   private var file: SmbFile? = null
@@ -64,7 +64,7 @@ class SmbDataSource(
     bufferPosition = 0
     bufferLength = 0
 
-    logger.debug("SMB OPEN: //$shareName/$path position=$position remaining=$remaining")
+    logger.debug("SMB OPEN: //$shareName/$path " + "position=$position remaining=$remaining")
 
     transferStarted(dataSpec)
 
@@ -141,85 +141,55 @@ class SmbDataSource(
 
     val currentFile = file ?: throw IllegalStateException("SMB file is not open")
     val readPosition = position
+    val startNanos = System.nanoTime()
 
-    val fillStartNanos = System.nanoTime()
-    var totalRead = 0
+    val bytesRead =
+        try {
+          currentFile.read(
+              filePosition = readPosition,
+              buffer = buffer,
+              bufferOffset = 0,
+              length = buffer.size,
+          )
+        } catch (e: Exception) {
+          val elapsedMs = (System.nanoTime() - startNanos) / 1_000_000
 
-    while (totalRead < buffer.size && !closed) {
-      val startNanos = System.nanoTime()
-
-      val bytesRead =
-          try {
-            currentFile.read(
-                filePosition = readPosition + totalRead,
-                buffer = buffer,
-                bufferOffset = totalRead,
-                length = buffer.size - totalRead,
-            )
-          } catch (e: Exception) {
-            val elapsedMs = (System.nanoTime() - startNanos) / 1_000_000
-
-            if (closed || isInterrupted(e)) {
-              logger.debug(
-                  "SMB READ CANCELLED: position=${readPosition + totalRead} " +
-                      "elapsed=${elapsedMs}ms"
-              )
-              return false
-            }
-
-            logger.error(
-                "SMB READ FAILED: position=${readPosition + totalRead} " + "elapsed=${elapsedMs}ms",
-                e,
-            )
-
-            throw e
+          if (closed || isInterrupted(e)) {
+            logger.debug("SMB READ CANCELLED: position=$readPosition " + "elapsed=${elapsedMs}ms")
+            return false
           }
 
-      if (bytesRead <= 0) {
-        break
-      }
+          logger.error(
+              "SMB READ FAILED: position=$readPosition " + "elapsed=${elapsedMs}ms",
+              e,
+          )
 
-      totalRead += bytesRead
+          throw e
+        }
 
-      val elapsedMs = (System.nanoTime() - startNanos) / 1_000_000
-      val speed =
-          if (elapsedMs > 0) {
-            bytesRead / 1024.0 / 1024.0 / (elapsedMs / 1000.0)
-          } else {
-            0.0
-          }
-
-      logger.debug(
-          "SMB READ: position=${readPosition + totalRead - bytesRead} " +
-              "bytes=$bytesRead " +
-              "elapsed=${elapsedMs}ms " +
-              "speed=%.2f MB/s".format(speed)
-      )
-    }
-
-    if (closed) {
+    if (bytesRead <= 0) {
       return false
     }
 
-    val totalElapsedMs = (System.nanoTime() - fillStartNanos) / 1_000_000
-    val totalSpeed =
-        if (totalElapsedMs > 0) {
-          totalRead / 1024.0 / 1024.0 / (totalElapsedMs / 1000.0)
+    val elapsedMs = (System.nanoTime() - startNanos) / 1_000_000
+    val speed =
+        if (elapsedMs > 0) {
+          bytesRead / 1024.0 / 1024.0 / (elapsedMs / 1000.0)
         } else {
           0.0
         }
 
     logger.debug(
-        "SMB FILL: position=$readPosition " +
-            "bytes=$totalRead " +
-            "elapsed=${totalElapsedMs}ms " +
-            "speed=%.2f MB/s".format(totalSpeed)
+        "SMB READ: position=$readPosition " +
+            "bytes=$bytesRead " +
+            "elapsed=${elapsedMs}ms " +
+            "speed=%.2f MB/s".format(speed)
     )
 
     bufferPosition = 0
-    bufferLength = totalRead
+    bufferLength = bytesRead
 
-    return totalRead > 0
+    return true
   }
 
   private fun isInterrupted(error: Throwable): Boolean {

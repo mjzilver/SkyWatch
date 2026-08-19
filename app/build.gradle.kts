@@ -44,4 +44,5 @@ dependencies {
   implementation("com.google.code.gson:gson:2.10.1")
   implementation("androidx.compose.material3:material3")
   implementation("androidx.datastore:datastore-preferences:1.1.7")
+  debugImplementation(libs.leakcanary)
 }
