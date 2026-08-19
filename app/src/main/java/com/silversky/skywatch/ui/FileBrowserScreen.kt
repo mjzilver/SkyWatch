@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.outlined.Folder
@@ -33,7 +34,8 @@ import com.silversky.core.client.SmbClient
 import com.silversky.core.logger.Logger
 import com.silversky.core.smb.SmbEntry
 import com.silversky.core.smb.SmbServer
-import com.silversky.skywatch.utils.PlaybackPositionStore
+import com.silversky.skywatch.utils.PlaybackState
+import com.silversky.skywatch.utils.PlaybackStateStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -44,7 +46,7 @@ fun FileBrowserScreen(
     server: SmbServer,
     shareName: String,
     logger: Logger,
-    playbackPositionStore: PlaybackPositionStore,
+    playbackStateStore: PlaybackStateStore,
     onFileSelected: (SmbEntry) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -57,7 +59,7 @@ fun FileBrowserScreen(
   }
 
   var resumeEntries by remember {
-    mutableStateOf<Set<String>>(emptySet())
+    mutableStateOf<Map<String, PlaybackState>>(emptyMap())
   }
 
   var loading by remember {
@@ -122,15 +124,19 @@ fun FileBrowserScreen(
         withContext(Dispatchers.IO) {
           entries
               .filter { !it.isDirectory }
-              .filter {
-                playbackPositionStore.hasEntry(
-                    ip = server.ipAddress,
-                    share = shareName,
-                    path = it.path,
-                )
+              .mapNotNull { entry ->
+                val progress =
+                    playbackStateStore.get(
+                        ip = server.ipAddress,
+                        share = shareName,
+                        path = entry.path,
+                    )
+
+                progress?.let {
+                  entry.path to it
+                }
               }
-              .map { it.path }
-              .toSet()
+              .toMap()
         }
   }
 
@@ -172,9 +178,19 @@ fun FileBrowserScreen(
               items = entries,
               key = { entry -> entry.path },
           ) { entry ->
+            val progress = resumeEntries[entry.path]
+
+            val hasFinished =
+                progress != null &&
+                    progress.duration > 0 &&
+                    progress.position >= progress.duration * 0.90
+
+            val hasResumePosition = progress != null && !hasFinished
+
             FileEntryButton(
                 entry = entry,
-                hasResumePosition = entry.path in resumeEntries,
+                hasResumePosition = hasResumePosition,
+                hasFinished = hasFinished,
                 onClick = {
                   if (entry.isDirectory) {
                     currentPath = entry.path
@@ -195,6 +211,7 @@ fun FileBrowserScreen(
 private fun FileEntryButton(
     entry: SmbEntry,
     hasResumePosition: Boolean,
+    hasFinished: Boolean,
     onClick: () -> Unit,
 ) {
   Button(
@@ -209,6 +226,7 @@ private fun FileEntryButton(
           imageVector =
               when {
                 entry.isDirectory -> Icons.Outlined.Folder
+                hasFinished -> Icons.Filled.Done
                 hasResumePosition -> Icons.Filled.PlayCircle
                 else -> Icons.Filled.PlayArrow
               },

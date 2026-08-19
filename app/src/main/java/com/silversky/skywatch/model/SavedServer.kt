@@ -6,5 +6,5 @@ data class SavedServer(
     val server: SmbServer,
     val username: String = "",
     val password: String = "",
-    val isGuest: Boolean = false
+    val isGuest: Boolean = false,
 )

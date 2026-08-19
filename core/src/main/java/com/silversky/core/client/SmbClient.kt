@@ -15,6 +15,7 @@ import com.hierynomus.smbj.share.DiskShare
 import com.rapid7.client.dcerpc.mssrvs.ServerService
 import com.rapid7.client.dcerpc.transport.SMBTransportFactories
 import com.silversky.core.logger.Logger
+import com.silversky.core.smb.RefCountedDiskShare
 import com.silversky.core.smb.SmbEntry
 import com.silversky.core.smb.SmbFile
 import com.silversky.core.smb.SmbFileImpl
@@ -33,11 +34,13 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
   private var connection: Connection? = null
   private var session: Session? = null
 
+  private val shares = mutableMapOf<String, RefCountedDiskShare>()
+
   fun connect(
       server: SmbServer,
       username: String,
       password: String,
-      isGuest: Boolean = false
+      isGuest: Boolean = false,
   ) {
     synchronized(connectionLock) {
       if (connection != null && session != null) {
@@ -62,12 +65,13 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
         val authenticationContext =
             if (isGuest || username == "Everyone") {
               AuthenticationContext.guest()
-            } else
-                AuthenticationContext(
-                    username,
-                    password.toCharArray(),
-                    null,
-                )
+            } else {
+              AuthenticationContext(
+                  username,
+                  password.toCharArray(),
+                  null,
+              )
+            }
 
         val newSession = newConnection.authenticate(authenticationContext)
 
@@ -87,10 +91,13 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
           newConnection?.close()
         } catch (_: Exception) {}
 
-        this.connection = null
-        this.session = null
+        connection = null
+        session = null
 
-        logger.error("Failed to connect to " + "${server.name ?: server.ipAddress}: ${e.message}")
+        logger.error(
+            "Failed to connect to " + "${server.name ?: server.ipAddress}: ${e.message}",
+            e,
+        )
 
         throw e
       }
@@ -123,7 +130,9 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
       }
 
       val currentServer = server ?: throw IllegalStateException("No server available")
+
       val currentUsername = username ?: throw IllegalStateException("No username available")
+
       val currentPassword = password ?: throw IllegalStateException("No password available")
 
       connectLocked(
@@ -177,47 +186,128 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
       shareName: String,
       path: String,
   ): SmbFile? {
-    return withReconnectRetry {
-      synchronized(connectionLock) {
-        val session = requireSession()
+    synchronized(connectionLock) {
+      val session = requireSession()
+      val sharedShare = getShare(session, shareName)
 
-        val share = session.connectShare(shareName) as DiskShare
-
-        if (!share.fileExists(path)) {
-          try {
-            share.close()
-          } catch (_: Exception) {}
-
-          return@synchronized null
+      try {
+        if (!sharedShare.share.fileExists(path)) {
+          return null
         }
 
         val file =
-            try {
-              share.openFile(
-                  path,
-                  EnumSet.of(AccessMask.GENERIC_READ),
-                  EnumSet.noneOf(FileAttributes::class.java),
-                  EnumSet.of(
-                      SMB2ShareAccess.FILE_SHARE_READ,
-                      SMB2ShareAccess.FILE_SHARE_WRITE,
-                  ),
-                  SMB2CreateDisposition.FILE_OPEN,
-                  EnumSet.noneOf(SMB2CreateOptions::class.java),
+            sharedShare.share.openFile(
+                path,
+                EnumSet.of(AccessMask.GENERIC_READ),
+                EnumSet.noneOf(FileAttributes::class.java),
+                EnumSet.of(
+                    SMB2ShareAccess.FILE_SHARE_READ,
+                    SMB2ShareAccess.FILE_SHARE_WRITE,
+                ),
+                SMB2CreateDisposition.FILE_OPEN,
+                EnumSet.noneOf(SMB2CreateOptions::class.java),
+            )
+
+        sharedShare.acquire()
+
+        logger.debug(
+            "SMB FILE OPEN: //$shareName/$path " + "shareRefs=${sharedShare.referenceCount()}"
+        )
+
+        return SmbFileImpl(
+            file = file,
+            onClose = {
+              releaseShare(
+                  shareName = shareName,
+                  sharedShare = sharedShare,
               )
-            } catch (e: Exception) {
-              try {
-                share.close()
-              } catch (_: Exception) {}
+            },
+        )
+      } catch (e: Exception) {
+        cleanupUnusedShare(
+            shareName = shareName,
+            sharedShare = sharedShare,
+        )
 
-              throw e
-            }
-
-        SmbFileImpl(file)
+        throw e
       }
     }
   }
 
-  private fun <T> withReconnectRetry(operation: () -> T): T {
+  private fun getShare(
+      session: Session,
+      shareName: String,
+  ): RefCountedDiskShare {
+    val existing = shares[shareName]
+
+    if (existing != null && !existing.isClosed()) {
+      return existing
+    }
+
+    if (existing != null) {
+      shares.remove(shareName)
+    }
+
+    val diskShare =
+        session.connectShare(shareName) as? DiskShare
+            ?: throw IllegalStateException("SMB share '$shareName' is not a DiskShare")
+
+    val wrapped =
+        RefCountedDiskShare(
+            shareName = shareName,
+            share = diskShare,
+        )
+
+    shares[shareName] = wrapped
+
+    logger.debug("SMB SHARE OPEN: //$shareName")
+
+    return wrapped
+  }
+
+  private fun releaseShare(
+      shareName: String,
+      sharedShare: RefCountedDiskShare,
+  ) {
+    synchronized(connectionLock) {
+      sharedShare.release()
+
+      val references = sharedShare.referenceCount()
+
+      logger.debug("SMB SHARE RELEASE: //$shareName refs=$references")
+
+      if (references == 0) {
+        if (shares[shareName] === sharedShare) {
+          shares.remove(shareName)
+        }
+
+        logger.debug("SMB SHARE CLOSE: //$shareName")
+      }
+    }
+  }
+
+  private fun cleanupUnusedShare(
+      shareName: String,
+      sharedShare: RefCountedDiskShare,
+  ) {
+    synchronized(connectionLock) {
+      if (sharedShare.referenceCount() != 0) {
+        return
+      }
+
+      if (shares[shareName] === sharedShare) {
+        shares.remove(shareName)
+      }
+
+      sharedShare.close()
+
+      logger.debug("SMB SHARE CLOSE AFTER FAILED OPEN: //$shareName")
+    }
+  }
+
+  private fun <T> withReconnectRetry(
+      operation: () -> T,
+  ): T {
     var lastException: Exception? = null
 
     repeat(5) { attempt ->
@@ -235,7 +325,9 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
         }
 
         val delay = 200L shl attempt
+
         logger.warn("SMB operation failed " + "(attempt ${attempt + 1}/5): ${e.message}")
+
         Thread.sleep(delay)
 
         try {
@@ -253,18 +345,26 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
 
   private fun reconnect() {
     synchronized(connectionLock) {
-      val server = server ?: throw IllegalStateException("No server available for reconnect")
-      val username = username ?: throw IllegalStateException("No username available for reconnect")
-      val password = password ?: throw IllegalStateException("No password available for reconnect")
+      if (shares.values.any { it.referenceCount() > 0 }) {
+        throw IllegalStateException("Cannot reconnect while SMB files are active")
+      }
 
-      logger.info("Reconnecting to ${server.name ?: server.ipAddress}")
+      val currentServer = server ?: throw IllegalStateException("No server available for reconnect")
+
+      val currentUsername =
+          username ?: throw IllegalStateException("No username available for reconnect")
+
+      val currentPassword =
+          password ?: throw IllegalStateException("No password available for reconnect")
+
+      logger.info("Reconnecting to ${currentServer.name ?: currentServer.ipAddress}")
 
       invalidateConnectionLocked()
 
       connectLocked(
-          server = server,
-          username = username,
-          password = password,
+          server = currentServer,
+          username = currentUsername,
+          password = currentPassword,
       )
     }
   }
@@ -312,16 +412,27 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
         newConnection?.close()
       } catch (_: Exception) {}
 
-      this.connection = null
-      this.session = null
+      connection = null
+      session = null
 
-      logger.error("Failed to connect to " + "${server.name ?: server.ipAddress}: ${e.message}")
+      logger.error(
+          "Failed to connect to " + "${server.name ?: server.ipAddress}: ${e.message}",
+          e,
+      )
 
       throw e
     }
   }
 
   private fun invalidateConnectionLocked() {
+    shares.values.forEach {
+      try {
+        it.close()
+      } catch (_: Exception) {}
+    }
+
+    shares.clear()
+
     try {
       connection?.close()
     } catch (_: Exception) {}
@@ -334,7 +445,9 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
     return session ?: throw IllegalStateException("Not connected")
   }
 
-  private fun isDirectory(file: FileIdBothDirectoryInformation): Boolean {
+  private fun isDirectory(
+      file: FileIdBothDirectoryInformation,
+  ): Boolean {
     return EnumWithValue.EnumUtils.isSet(
         file.fileAttributes,
         FileAttributes.FILE_ATTRIBUTE_DIRECTORY,
@@ -343,6 +456,14 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
 
   fun disconnect() {
     synchronized(connectionLock) {
+      shares.values.forEach {
+        try {
+          it.close()
+        } catch (_: Exception) {}
+      }
+
+      shares.clear()
+
       try {
         connection?.close()
       } catch (_: Exception) {}

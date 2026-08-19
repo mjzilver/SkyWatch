@@ -13,9 +13,18 @@ interface SmbFile : AutoCloseable {
   ): Int
 }
 
-class SmbFileImpl(private val file: File) : SmbFile {
+class SmbFileImpl(
+    private val file: File,
+    private val onClose: () -> Unit,
+) : SmbFile {
+
+  private var closed = false
+
   override val size: Long
-    get() = file.fileInformation.standardInformation.endOfFile
+    get() {
+      check(!closed) { "SmbFile is closed" }
+      return file.fileInformation.standardInformation.endOfFile
+    }
 
   override fun read(
       filePosition: Long,
@@ -23,6 +32,8 @@ class SmbFileImpl(private val file: File) : SmbFile {
       bufferOffset: Int,
       length: Int,
   ): Int {
+    check(!closed) { "SmbFile is closed" }
+
     return file.read(
         buffer,
         filePosition,
@@ -32,6 +43,16 @@ class SmbFileImpl(private val file: File) : SmbFile {
   }
 
   override fun close() {
-    file.close()
+    if (closed) {
+      return
+    }
+
+    closed = true
+
+    try {
+      file.close()
+    } finally {
+      onClose()
+    }
   }
 }

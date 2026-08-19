@@ -16,7 +16,7 @@ class SmbDataSource(
 ) : BaseDataSource(false) {
 
   companion object {
-    private const val BUFFER_SIZE = 16 * 1024 * 1024
+    private const val BUFFER_SIZE = 8 * 1024 * 1024
   }
 
   private var file: SmbFile? = null
@@ -32,8 +32,12 @@ class SmbDataSource(
   private var bufferPosition = 0
   private var bufferLength = 0
 
+  @Volatile private var closed = false
+
   override fun open(dataSpec: DataSpec): Long {
     transferInitializing(dataSpec)
+
+    closed = false
 
     currentUri = dataSpec.uri
 
@@ -77,15 +81,23 @@ class SmbDataSource(
       return 0
     }
 
-    if (remaining <= 0L) {
+    if (remaining <= 0L || closed) {
       return C.RESULT_END_OF_INPUT
     }
 
     var totalRead = 0
 
-    while (totalRead < length && remaining > 0L) {
+    while (totalRead < length && remaining > 0L && !closed) {
       if (bufferPosition >= bufferLength) {
         fillBuffer()
+
+        if (closed) {
+          return if (totalRead > 0) {
+            totalRead
+          } else {
+            C.RESULT_END_OF_INPUT
+          }
+        }
 
         if (bufferLength <= 0) {
           return if (totalRead > 0) {
@@ -126,6 +138,10 @@ class SmbDataSource(
   }
 
   private fun fillBuffer() {
+    if (closed) {
+      return
+    }
+
     val currentFile = file ?: throw IllegalStateException("SMB file is not open")
 
     val readPosition = position
@@ -139,11 +155,9 @@ class SmbDataSource(
               length = buffer.size,
           )
         } catch (e: Exception) {
-          if (isInterrupted(e)) {
-            logger.debug("SMB READ INTERRUPTED: position=$readPosition")
-
-            Thread.currentThread().interrupt()
-            throw e
+          if (closed || isInterrupted(e)) {
+            logger.debug("SMB READ CANCELLED: position=$readPosition")
+            return
           }
 
           logger.error(
@@ -154,12 +168,12 @@ class SmbDataSource(
           throw e
         }
 
+    if (closed) {
+      return
+    }
+
     bufferPosition = 0
     bufferLength = bytesRead.coerceAtLeast(0)
-
-    if (bytesRead > 0) {
-      logger.debug("SMB BUFFER: position=$readPosition size=$bytesRead")
-    }
   }
 
   private fun isInterrupted(error: Throwable): Boolean {
@@ -179,6 +193,12 @@ class SmbDataSource(
   override fun getUri(): Uri? = currentUri
 
   override fun close() {
+    if (closed) {
+      return
+    }
+
+    closed = true
+
     logger.debug("SMB CLOSE: //$shareName/$path")
 
     try {
