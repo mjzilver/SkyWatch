@@ -1,4 +1,4 @@
-package com.silversky.skywatch.ui
+package com.silversky.skywatch.utils
 
 internal fun formatTime(milliseconds: Long): String {
   if (milliseconds <= 0L) {

@@ -1,4 +1,4 @@
-package com.silversky.skywatch.utils
+package com.silversky.skywatch.persistence
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit

@@ -1,4 +1,4 @@
-package com.silversky.skywatch.utils
+package com.silversky.skywatch.persistence
 
 import android.content.Context
 import android.util.Log
@@ -8,7 +8,7 @@ import com.silversky.core.smb.SmbServer
 import com.silversky.skywatch.model.SavedServer
 import java.io.File
 
-class ServerPersistenceManager(private val context: Context) {
+class ServerStore(private val context: Context) {
   private val gson = Gson()
   private val fileName = "saved_servers.json"
   private var serverCache: MutableList<SavedServer>? = null

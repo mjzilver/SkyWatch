@@ -34,8 +34,8 @@ import com.silversky.core.client.SmbClient
 import com.silversky.core.logger.Logger
 import com.silversky.core.smb.SmbEntry
 import com.silversky.core.smb.SmbServer
-import com.silversky.skywatch.utils.PlaybackState
-import com.silversky.skywatch.utils.PlaybackStateStore
+import com.silversky.skywatch.persistence.PlaybackState
+import com.silversky.skywatch.persistence.PlaybackStateStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

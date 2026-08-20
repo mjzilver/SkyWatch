@@ -2,15 +2,19 @@
 agp = "9.3.1"
 coreKtx = "1.19.0"
 appcompat = "1.8.0"
-kotlin = "2.2.10"
+kotlin = "2.3.20"
 composeBom = "2026.02.01"
 tvFoundation = "1.0.0"
 tvMaterial = "1.1.0"
 lifecycleRuntimeKtx = "2.11.0"
 activityCompose = "1.13.0"
-jetbrainsKotlinJvm = "2.2.10"
+jetbrainsKotlinJvm = "2.3.20"
 foundation = "1.12.0"
 leakcanary = "1.0.0"
+hilt = "2.60.1"
+hiltNavigationCompose = "1.4.0"
+navigationCompose = "2.9.8"
+ksp = "2.3.11"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -28,9 +32,15 @@ androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecyc
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
 leakcanary = { group = "com.android.tools.studio.leakcanary", name = "leakcanary", version.ref = "leakcanary" }
+hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
+hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
+hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrainsKotlinJvm" }
+hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 

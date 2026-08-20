@@ -64,7 +64,7 @@ class SmbDataSource(
     bufferPosition = 0
     bufferLength = 0
 
-    logger.debug("SMB OPEN: //$shareName/$path " + "position=$position remaining=$remaining")
+    logger.debug("SMB OPEN: //$shareName/$path position=$position remaining=$remaining")
 
     transferStarted(dataSpec)
 

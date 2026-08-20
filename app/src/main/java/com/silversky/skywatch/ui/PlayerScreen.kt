@@ -40,12 +40,12 @@ import com.silversky.core.logger.Logger
 import com.silversky.core.smb.SmbEntry
 import com.silversky.skywatch.media.createSmbPlayer
 import com.silversky.skywatch.media.prepareSmbMediaSource
+import com.silversky.skywatch.persistence.PlaybackState
+import com.silversky.skywatch.persistence.PlaybackStateStore
 import com.silversky.skywatch.ui.theme.SubtitleBackground
 import com.silversky.skywatch.ui.theme.SubtitleOutline
 import com.silversky.skywatch.ui.theme.SubtitleText
 import com.silversky.skywatch.ui.theme.SubtitleWindow
-import com.silversky.skywatch.utils.PlaybackState
-import com.silversky.skywatch.utils.PlaybackStateStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch

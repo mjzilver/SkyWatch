@@ -1,9 +1,10 @@
 package com.silversky.skywatch
 
-import android.content.Context
-import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.silversky.core.logger.Logger
 import com.silversky.skywatch.ui.FileBrowserScreen
 import com.silversky.skywatch.ui.HomeScreen
@@ -11,43 +12,36 @@ import com.silversky.skywatch.ui.PlayerScreen
 import com.silversky.skywatch.ui.ScanDialog
 import com.silversky.skywatch.ui.ServerDialog
 import com.silversky.skywatch.ui.ShareScreen
-import com.silversky.skywatch.utils.PlaybackStateStore
-import com.silversky.skywatch.utils.ServerPersistenceManager
+import com.silversky.skywatch.viewmodel.DialogState
+import com.silversky.skywatch.viewmodel.FileBrowserViewModel
+import com.silversky.skywatch.viewmodel.HomeViewModel
+import com.silversky.skywatch.viewmodel.PlayerViewModel
+import com.silversky.skywatch.viewmodel.SharesViewModel
+
+object Routes {
+  const val HOME = "home"
+  const val SHARES = "shares"
+  const val BROWSER = "browser"
+  const val PLAYER = "player"
+}
 
 @Composable
 fun SkyWatchApp(
     logger: Logger,
-    context: Context,
 ) {
-  val persistenceManager = remember {
-    ServerPersistenceManager(context)
-  }
+  val navController = rememberNavController()
 
-  val playbackStateStore = remember {
-    PlaybackStateStore(context)
-  }
-
-  val viewModel = remember {
-    SkyWatchViewModel(
-        persistenceManager = persistenceManager,
-        logger = logger,
-    )
-  }
-
-  BackHandler(
-      enabled = viewModel.screen != Screen.HOME || viewModel.dialog != DialogState.None,
-  ) {
-    viewModel.back()
-  }
-
-  when (viewModel.screen) {
-    Screen.HOME -> {
+  NavHost(navController = navController, startDestination = Routes.HOME) {
+    composable(Routes.HOME) {
+      val viewModel: HomeViewModel = hiltViewModel()
       HomeScreen(
           savedServers = viewModel.servers,
           error = viewModel.scanError,
           onServerClick = { server ->
             logger.info("Saved server clicked")
-            viewModel.selectServer(server)
+            viewModel.selectServer(server) {
+              navController.navigate(Routes.SHARES)
+            }
           },
           onEditServer = { server ->
             logger.info("Edit server clicked: ${server.server.ipAddress}")
@@ -60,11 +54,49 @@ fun SkyWatchApp(
             viewModel.deleteServer(server)
           },
       )
+
+      val dialog = viewModel.dialog
+      if (dialog != DialogState.None) {
+        when (dialog) {
+          is DialogState.Server -> {
+            val server = dialog.editingServer
+            ServerDialog(
+                onDismiss = { viewModel.dismissDialog() },
+                onConnect = { input ->
+                  if (server != null) {
+                    viewModel.updateServer(input, server.server)
+                  } else {
+                    viewModel.connect(input) {
+                      navController.navigate(Routes.SHARES)
+                    }
+                  }
+                },
+                onScan = { viewModel.scanNetwork() },
+                initialAddress = server?.server?.ipAddress ?: dialog.scannedAddress,
+                initialName = server?.server?.name ?: dialog.scannedName,
+                initialUsername = server?.username ?: "",
+                initialPassword = server?.password ?: "",
+                initialIsGuest = server?.isGuest ?: false,
+                isEditing = server != null,
+            )
+          }
+          DialogState.Scan -> {
+            ScanDialog(
+                onDismiss = { viewModel.dismissDialog() },
+                onServerSelected = { result ->
+                  viewModel.selectScannedServer(result)
+                },
+                servers = viewModel.scanResults,
+            )
+          }
+        }
+      }
     }
 
-    Screen.SHARES -> {
-      val client = viewModel.smbClient
-      val server = viewModel.selectedServer
+    composable(Routes.SHARES) {
+      val viewModel: SharesViewModel = hiltViewModel()
+      val client = viewModel.client
+      val server = viewModel.server
 
       if (client != null && server != null) {
         ShareScreen(
@@ -72,19 +104,24 @@ fun SkyWatchApp(
             server = server,
             logger = logger,
             onShareSelected = { share ->
-              viewModel.selectShare(share)
+              viewModel.selectShare(share) {
+                navController.navigate(Routes.BROWSER)
+              }
             },
             onBack = {
-              viewModel.disconnect()
+              viewModel.disconnect {
+                navController.popBackStack()
+              }
             },
         )
       }
     }
 
-    Screen.BROWSER -> {
-      val client = viewModel.smbClient
-      val server = viewModel.selectedServer
-      val share = viewModel.selectedShare
+    composable(Routes.BROWSER) {
+      val viewModel: FileBrowserViewModel = hiltViewModel()
+      val client = viewModel.client
+      val server = viewModel.server
+      val share = viewModel.shareName
 
       if (client != null && server != null && share != null) {
         FileBrowserScreen(
@@ -92,21 +129,26 @@ fun SkyWatchApp(
             server = server,
             shareName = share,
             logger = logger,
-            playbackStateStore = playbackStateStore,
+            playbackStateStore = viewModel.playbackStateStore,
             onFileSelected = { file ->
-              viewModel.selectFile(file)
+              viewModel.selectFile(file) {
+                navController.navigate(Routes.PLAYER)
+              }
             },
             onBack = {
-              viewModel.back()
+              viewModel.back {
+                navController.popBackStack()
+              }
             },
         )
       }
     }
 
-    Screen.PLAYER -> {
-      val client = viewModel.smbClient
-      val share = viewModel.selectedShare
-      val file = viewModel.selectedFile
+    composable(Routes.PLAYER) {
+      val viewModel: PlayerViewModel = hiltViewModel()
+      val client = viewModel.client
+      val share = viewModel.shareName
+      val file = viewModel.file
 
       if (client != null && share != null && file != null) {
         PlayerScreen(
@@ -114,57 +156,14 @@ fun SkyWatchApp(
             shareName = share,
             file = file,
             logger = logger,
-            playbackStateStore = playbackStateStore,
+            playbackStateStore = viewModel.playbackStateStore,
             onBack = {
-              viewModel.back()
+              viewModel.back {
+                navController.popBackStack()
+              }
             },
         )
       }
-    }
-  }
-
-  when (val dialog = viewModel.dialog) {
-    DialogState.None -> Unit
-
-    is DialogState.Server -> {
-      val server = dialog.editingServer
-
-      ServerDialog(
-          onDismiss = {
-            viewModel.dismissDialog()
-          },
-          onConnect = { input ->
-            if (server != null) {
-              viewModel.updateServer(
-                  input = input,
-                  oldServer = server.server,
-              )
-            } else {
-              viewModel.connect(input)
-            }
-          },
-          onScan = {
-            viewModel.scanNetwork()
-          },
-          initialAddress = server?.server?.ipAddress ?: dialog.scannedAddress,
-          initialName = server?.server?.name ?: dialog.scannedName ?: "",
-          initialUsername = server?.username ?: "",
-          initialPassword = server?.password ?: "",
-          initialIsGuest = server?.isGuest ?: false,
-          isEditing = server != null,
-      )
-    }
-
-    DialogState.Scan -> {
-      ScanDialog(
-          onDismiss = {
-            viewModel.back()
-          },
-          onServerSelected = { result ->
-            viewModel.selectScannedServer(result)
-          },
-          servers = viewModel.scanResults,
-      )
     }
   }
 }

@@ -1,6 +1,8 @@
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
+  alias(libs.plugins.hilt)
+  alias(libs.plugins.ksp)
 }
 
 android {
@@ -16,11 +18,16 @@ android {
   }
 
   buildTypes { release { optimization { enable = false } } }
+
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
   }
-  buildFeatures { compose = true }
+
+  buildFeatures {
+    compose = true
+    buildConfig = true
+  }
 }
 
 dependencies {
@@ -45,4 +52,8 @@ dependencies {
   implementation("androidx.compose.material3:material3")
   implementation("androidx.datastore:datastore-preferences:1.1.7")
   debugImplementation(libs.leakcanary)
+  implementation(libs.hilt.android)
+  ksp(libs.hilt.compiler)
+  implementation(libs.hilt.navigation.compose)
+  implementation(libs.androidx.navigation.compose)
 }

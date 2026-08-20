@@ -3,7 +3,9 @@ package com.silversky.skywatch.logger
 import android.util.Log
 import com.silversky.core.logger.Logger
 
-class AndroidLogger(private val tag: String = "SkyWatch") : Logger {
+class AndroidLogger(
+    private val tag: String = "SkyWatch",
+) : Logger {
 
   override fun debug(message: String) {
     Log.d(tag, message)

@@ -1,4 +1,4 @@
-package com.silversky.skywatch
+package com.silversky.skywatch.viewmodel
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -7,23 +7,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.silversky.core.client.SmbClient
 import com.silversky.core.logger.Logger
-import com.silversky.core.smb.SmbEntry
 import com.silversky.core.smb.SmbScanner
 import com.silversky.core.smb.SmbServer
+import com.silversky.skywatch.manager.ConnectionManager
 import com.silversky.skywatch.model.SavedServer
+import com.silversky.skywatch.persistence.ServerStore
 import com.silversky.skywatch.ui.ScanResult
 import com.silversky.skywatch.ui.ServerConnectionInput
-import com.silversky.skywatch.utils.ServerPersistenceManager
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-enum class Screen {
-  HOME,
-  SHARES,
-  BROWSER,
-  PLAYER,
-}
+import javax.inject.Inject
 
 sealed interface DialogState {
   data object None : DialogState
@@ -37,13 +32,14 @@ sealed interface DialogState {
   data object Scan : DialogState
 }
 
-class SkyWatchViewModel(
-    private val persistenceManager: ServerPersistenceManager,
+@HiltViewModel
+class HomeViewModel
+@Inject
+constructor(
+    private val persistenceManager: ServerStore,
     private val logger: Logger,
+    private val connectionManager: ConnectionManager,
 ) : ViewModel() {
-
-  var screen by mutableStateOf(Screen.HOME)
-    private set
 
   var dialog by mutableStateOf<DialogState>(DialogState.None)
     private set
@@ -60,18 +56,6 @@ class SkyWatchViewModel(
   var scanning by mutableStateOf(false)
     private set
 
-  var selectedServer by mutableStateOf<SmbServer?>(null)
-    private set
-
-  var selectedShare by mutableStateOf<String?>(null)
-    private set
-
-  var selectedFile by mutableStateOf<SmbEntry?>(null)
-    private set
-
-  var smbClient by mutableStateOf<SmbClient?>(null)
-    private set
-
   init {
     loadServers()
   }
@@ -79,7 +63,6 @@ class SkyWatchViewModel(
   private fun loadServers() {
     viewModelScope.launch(Dispatchers.IO) {
       val loadedServers = persistenceManager.getServers()
-
       withContext(Dispatchers.Main) {
         servers = loadedServers
       }
@@ -88,19 +71,11 @@ class SkyWatchViewModel(
 
   fun addServer() {
     scanError = null
-
-    dialog =
-        DialogState.Server(
-            scannedAddress = "",
-            scannedName = "",
-        )
+    dialog = DialogState.Server()
   }
 
   fun editServer(server: SavedServer) {
-    dialog =
-        DialogState.Server(
-            editingServer = server,
-        )
+    dialog = DialogState.Server(editingServer = server)
   }
 
   fun dismissDialog() {
@@ -108,10 +83,7 @@ class SkyWatchViewModel(
   }
 
   fun scanNetwork() {
-    if (scanning) {
-      return
-    }
-
+    if (scanning) return
     dialog = DialogState.Scan
     scanning = true
     scanError = null
@@ -120,30 +92,16 @@ class SkyWatchViewModel(
     viewModelScope.launch(Dispatchers.IO) {
       try {
         logger.info("Starting SMB network scan")
-
         val discoveredServers = SmbScanner().scanNetwork(logger)
-
-        discoveredServers.forEach { server ->
-          logger.info("Found server ${server.name} with ip ${server.ipAddress}")
-        }
-
         val results = discoveredServers.map { server ->
-          ScanResult(
-              ip = server.ipAddress,
-              name = server.name ?: server.ipAddress,
-          )
+          ScanResult(ip = server.ipAddress, name = server.name ?: server.ipAddress)
         }
-
         withContext(Dispatchers.Main) {
           scanResults = results
           scanning = false
         }
       } catch (e: Exception) {
-        logger.error(
-            "SMB network scan failed",
-            e,
-        )
-
+        logger.error("SMB network scan failed", e)
         withContext(Dispatchers.Main) {
           scanning = false
           scanError = e.message ?: "Network scan failed"
@@ -153,31 +111,16 @@ class SkyWatchViewModel(
   }
 
   fun selectScannedServer(result: ScanResult) {
-    val currentDialog = dialog
-
-    if (currentDialog !is DialogState.Scan) {
-      return
-    }
-
-    dialog =
-        DialogState.Server(
-            scannedAddress = result.ip,
-            scannedName = result.name,
-        )
+    if (dialog !is DialogState.Scan) return
+    dialog = DialogState.Server(scannedAddress = result.ip, scannedName = result.name)
   }
 
-  fun connect(input: ServerConnectionInput) {
-    val server =
-        SmbServer(
-            name = input.name,
-            ipAddress = input.address,
-        )
-
+  fun connect(input: ServerConnectionInput, onConnected: () -> Unit) {
+    val server = SmbServer(name = input.name, ipAddress = input.address)
     logger.info("Connecting to ${server.ipAddress}")
 
     viewModelScope.launch(Dispatchers.IO) {
       val client = SmbClient(logger)
-
       try {
         client.connect(
             server = server,
@@ -185,46 +128,23 @@ class SkyWatchViewModel(
             password = input.password,
             isGuest = input.isGuest,
         )
-
-        val saved =
-            SavedServer(
-                server = server,
-                username = input.username,
-                password = input.password,
-                isGuest = input.isGuest,
-            )
+        val saved = SavedServer(server, input.username, input.password, input.isGuest)
 
         val existingServers = persistenceManager.getServers()
-
-        if (
-            existingServers.none {
-              it.server.ipAddress == server.ipAddress
-            }
-        ) {
+        if (existingServers.none { it.server.ipAddress == server.ipAddress }) {
           persistenceManager.saveServer(saved)
         }
-
         val updatedServers = persistenceManager.getServers()
 
         withContext(Dispatchers.Main) {
-          smbClient = client
-          selectedServer = server
-          selectedShare = null
-          selectedFile = null
-
+          connectionManager.onConnected(client, server)
           servers = updatedServers
-
           dialog = DialogState.None
-          screen = Screen.SHARES
+          onConnected()
         }
       } catch (e: Exception) {
-        logger.error(
-            "Failed to connect to ${server.ipAddress}",
-            e,
-        )
-
+        logger.error("Failed to connect to ${server.ipAddress}", e)
         client.close()
-
         withContext(Dispatchers.Main) {
           scanError = e.message ?: "Connection failed"
         }
@@ -232,7 +152,7 @@ class SkyWatchViewModel(
     }
   }
 
-  fun selectServer(savedServer: SavedServer) {
+  fun selectServer(savedServer: SavedServer, onConnected: () -> Unit) {
     connect(
         ServerConnectionInput(
             name = savedServer.server.name ?: "",
@@ -240,45 +160,26 @@ class SkyWatchViewModel(
             username = savedServer.username,
             password = savedServer.password,
             isGuest = savedServer.isGuest,
-        )
+        ),
+        onConnected,
     )
   }
 
-  fun updateServer(
-      input: ServerConnectionInput,
-      oldServer: SmbServer,
-  ) {
-    val server =
-        SmbServer(
-            name = input.name,
-            ipAddress = input.address,
-        )
-
-    logger.info("Updating server ${server.ipAddress}")
-
+  fun updateServer(input: ServerConnectionInput, oldServer: SmbServer) {
+    val server = SmbServer(name = input.name, ipAddress = input.address)
     viewModelScope.launch(Dispatchers.IO) {
       try {
         persistenceManager.updateServer(
-            SavedServer(
-                server = server,
-                username = input.username,
-                password = input.password,
-                isGuest = input.isGuest,
-            ),
+            SavedServer(server, input.username, input.password, input.isGuest),
             oldServer,
         )
-
         val updatedServers = persistenceManager.getServers()
-
         withContext(Dispatchers.Main) {
           servers = updatedServers
           dialog = DialogState.None
         }
       } catch (e: Exception) {
-        logger.error(
-            "Failed to update server",
-            e,
-        )
+        logger.error("Failed to update server", e)
       }
     }
   }
@@ -286,74 +187,10 @@ class SkyWatchViewModel(
   fun deleteServer(server: SavedServer) {
     viewModelScope.launch(Dispatchers.IO) {
       persistenceManager.deleteServer(server.server)
-
       val updatedServers = persistenceManager.getServers()
-
       withContext(Dispatchers.Main) {
         servers = updatedServers
       }
-    }
-  }
-
-  fun selectShare(share: String) {
-    selectedShare = share
-    screen = Screen.BROWSER
-  }
-
-  fun selectFile(file: SmbEntry) {
-    selectedFile = file
-    screen = Screen.PLAYER
-  }
-
-  fun back() {
-    when {
-      dialog is DialogState.Scan -> {
-        dialog = DialogState.Server()
-      }
-
-      dialog is DialogState.Server -> {
-        dialog = DialogState.None
-      }
-
-      screen == Screen.PLAYER -> {
-        selectedFile = null
-        screen = Screen.BROWSER
-      }
-
-      screen == Screen.BROWSER -> {
-        selectedShare = null
-        screen = Screen.SHARES
-      }
-
-      screen == Screen.SHARES -> {
-        disconnect()
-      }
-
-      screen == Screen.HOME -> Unit
-    }
-  }
-
-  fun disconnect() {
-    val client = smbClient
-
-    smbClient = null
-    selectedServer = null
-    selectedShare = null
-    selectedFile = null
-    screen = Screen.HOME
-
-    viewModelScope.launch(Dispatchers.IO) {
-      client?.close()
-    }
-  }
-
-  override fun onCleared() {
-    val client = smbClient
-
-    smbClient = null
-
-    viewModelScope.launch(Dispatchers.IO) {
-      client?.close()
     }
   }
 }
