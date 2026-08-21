@@ -39,7 +39,7 @@ object SubtitleRoutes {
           return@get
         }
 
-        println("Found ${result.title} with ${result.subtitles.count()} subtitle(s)")
+        println("Found $result")
 
         call.respond(result.toSearchResult())
       }

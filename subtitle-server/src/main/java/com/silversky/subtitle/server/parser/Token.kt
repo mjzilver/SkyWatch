@@ -5,7 +5,7 @@ sealed interface Token {
       val value: String,
   ) : Token
 
-  data class Year(
+  data class Number(
       val value: Int,
   ) : Token
 

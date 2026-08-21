@@ -5,30 +5,52 @@ import com.silversky.subtitle.server.model.MediaInfo
 class FilenameParser(
     private val classifier: TokenClassifier,
 ) {
-    fun parse(filename: String): MediaInfo {
-        val name = filename.substringBeforeLast('.', filename)
 
-        val tokens = name
-            .split(".", " ", "_")
-            .filter { it.isNotBlank() }
-            .map(classifier::classify)
+  fun parse(filename: String): MediaInfo {
+    val tokens =
+        filename.split(".", " ", "_", "-").filter { it.isNotBlank() }.map(classifier::classify)
 
-        val seasonEpisode =
-            tokens.filterIsInstance<Token.SeasonEpisode>().firstOrNull()
+    val seasonEpisode = tokens.filterIsInstance<Token.SeasonEpisode>().firstOrNull()
+    val seasonEpisodeIndex = tokens.indexOfFirst { it is Token.SeasonEpisode }.takeIf { it >= 0 }
 
-        val year =
-            tokens.filterIsInstance<Token.Year>().firstOrNull()
+    val yearIndex =
+        tokens
+            .mapIndexed { index, token -> index to token }
+            .lastOrNull { (_, token) ->
+              token is Token.Number && token.value in 1900..2099
+            }
+            ?.first
 
-        val titleTokens =
-            tokens
-                .takeWhile { it is Token.Text }
-                .filterIsInstance<Token.Text>()
+    val titleEndIndex =
+        listOfNotNull(
+                yearIndex,
+                seasonEpisodeIndex,
+            )
+            .minOrNull() ?: tokens.size
 
-        return MediaInfo(
-            title = titleTokens.joinToString(" ") { it.value },
-            year = year?.value,
-            season = seasonEpisode?.season,
-            episode = seasonEpisode?.episode,
-        )
+    val titleTokens =
+        tokens.take(titleEndIndex).filter {
+          it is Token.Text || it is Token.Number
+        }
+
+    val title =
+        titleTokens.joinToString(" ") {
+          when (it) {
+            is Token.Text -> it.value
+            is Token.Number -> it.value.toString()
+            else -> error("Unexpected token in title: $it")
+          }
+        }
+
+    val year = yearIndex?.let {
+      (tokens[it] as Token.Number).value
     }
+
+    return MediaInfo(
+        title = title,
+        year = year,
+        season = seasonEpisode?.season,
+        episode = seasonEpisode?.episode,
+    )
+  }
 }

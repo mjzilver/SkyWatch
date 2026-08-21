@@ -5,6 +5,7 @@ import com.silversky.subtitle.server.parser.FilenameParser
 import com.silversky.subtitle.server.parser.TokenClassifier
 import com.silversky.subtitle.server.repository.SubtitleRepository
 import com.silversky.subtitle.server.routes.SubtitleRoutes
+import com.silversky.subtitle.server.service.MdnsService
 import com.silversky.subtitle.server.service.SubtitleService
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.install
@@ -25,6 +26,14 @@ fun main() {
       )
 
   println("Starting Subtitle Server on port ${config.port}...")
+
+  val mdns =
+      MdnsService(
+          port = config.port,
+          config = config.mdns,
+      )
+
+  mdns.start()
 
   embeddedServer(
           factory = Netty,
