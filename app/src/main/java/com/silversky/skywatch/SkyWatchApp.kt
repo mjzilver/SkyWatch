@@ -66,14 +66,8 @@ fun SkyWatchApp(
             val server = dialog.editingServer
             ServerDialog(
                 onDismiss = { viewModel.dismissDialog() },
-                onConnect = { input ->
-                  if (server != null) {
-                    viewModel.updateServer(input, server.server)
-                  } else {
-                    viewModel.connect(input) {
-                      navController.navigate(Routes.SHARES)
-                    }
-                  }
+                onSave = { input ->
+                  viewModel.saveServer(input, server?.server?.ipAddress)
                 },
                 onScan = { viewModel.scanNetwork() },
                 initialAddress = server?.server?.ipAddress ?: dialog.scannedAddress,

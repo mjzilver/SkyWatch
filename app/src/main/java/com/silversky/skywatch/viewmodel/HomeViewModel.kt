@@ -107,29 +107,6 @@ constructor(
     dialog = DialogState.Server(scannedAddress = result.ip, scannedName = result.name)
   }
 
-  fun connect(input: ServerConnectionInput, onConnected: () -> Unit) {
-    val server = SmbServer(name = input.name, ipAddress = input.address)
-    val saved = SavedServer(server, input.username, input.password, input.isGuest)
-
-    logger.info("Connecting to ${server.ipAddress}")
-    scanError = null
-
-    viewModelScope.launch {
-      connectionManager.connect(saved)
-      val currentState = connectionManager.connectionState.value
-
-      if (currentState is ConnectionState.Connected) {
-        if (servers.value.none { it.server.ipAddress == server.ipAddress }) {
-          repository.addServer(saved)
-        }
-        dialog = DialogState.None
-        onConnected()
-      } else if (currentState is ConnectionState.Error) {
-        scanError = currentState.message
-      }
-    }
-  }
-
   fun selectServer(savedServer: SavedServer, onConnected: () -> Unit) {
     viewModelScope.launch {
       connectionManager.connect(savedServer)
@@ -141,16 +118,20 @@ constructor(
     }
   }
 
-  fun updateServer(input: ServerConnectionInput, oldServer: SmbServer) {
+  fun saveServer(input: ServerConnectionInput, oldIpAddress: String? = null) {
     val server = SmbServer(name = input.name, ipAddress = input.address)
-    val updated = SavedServer(server, input.username, input.password, input.isGuest)
+    val saved = SavedServer(server, input.username, input.password, input.isGuest)
 
     viewModelScope.launch {
       try {
-        repository.updateServer(oldServer.ipAddress, updated)
+        if (oldIpAddress != null) {
+          repository.updateServer(oldIpAddress, saved)
+        } else {
+          repository.addServer(saved)
+        }
         dialog = DialogState.None
       } catch (e: Exception) {
-        logger.error("Failed to update server", e)
+        logger.error("Failed to save server", e)
       }
     }
   }

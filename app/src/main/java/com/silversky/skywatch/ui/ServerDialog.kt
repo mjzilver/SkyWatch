@@ -40,7 +40,7 @@ data class ServerConnectionInput(
 @Composable
 fun ServerDialog(
     onDismiss: () -> Unit,
-    onConnect: (ServerConnectionInput) -> Unit,
+    onSave: (ServerConnectionInput) -> Unit,
     onScan: () -> Unit,
     initialAddress: String = "",
     initialName: String = "",
@@ -145,7 +145,7 @@ fun ServerDialog(
         Button(
             onClick = {
               if (name.isNotBlank() && address.isNotBlank()) {
-                onConnect(
+                onSave(
                     ServerConnectionInput(
                         name = name.trim(),
                         address = address.trim(),
@@ -158,7 +158,7 @@ fun ServerDialog(
             },
             modifier = Modifier.weight(1f).focusRequester(connectButtonRequester),
         ) {
-          Text(if (isEditing) "Save" else "Connect")
+          Text("Save")
         }
 
         Button(
