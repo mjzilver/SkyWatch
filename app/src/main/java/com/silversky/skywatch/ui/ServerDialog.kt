@@ -16,6 +16,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -70,6 +73,8 @@ fun ServerDialog(
     mutableStateOf(initialIsGuest)
   }
 
+  val connectButtonRequester = remember { FocusRequester() }
+
   Dialog(onDismissRequest = onDismiss) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(32.dp),
@@ -98,7 +103,11 @@ fun ServerDialog(
           onClick = {
             useGuestAccount = !useGuestAccount
           },
-          modifier = Modifier.fillMaxWidth(),
+          modifier = Modifier.fillMaxWidth().focusProperties {
+            if (useGuestAccount) {
+              down = connectButtonRequester
+            }
+          },
       ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -124,6 +133,7 @@ fun ServerDialog(
           onValueChange = { password = it },
           label = "Password",
           enabled = !useGuestAccount,
+          modifier = Modifier.focusProperties { down = connectButtonRequester },
       )
 
       Spacer(modifier = Modifier.height(8.dp))
@@ -146,7 +156,7 @@ fun ServerDialog(
                 )
               }
             },
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).focusRequester(connectButtonRequester),
         ) {
           Text(if (isEditing) "Save" else "Connect")
         }
@@ -167,6 +177,7 @@ private fun TvTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
+    modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
   Column(
@@ -195,7 +206,8 @@ private fun TvTextField(
             ),
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         modifier =
-            Modifier.fillMaxWidth()
+            modifier
+                .fillMaxWidth()
                 .background(
                     if (enabled) {
                       MaterialTheme.colorScheme.surface
