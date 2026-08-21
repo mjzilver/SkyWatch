@@ -3,11 +3,13 @@ agp = "9.3.1"
 coreKtx = "1.19.0"
 appcompat = "1.8.0"
 datastorePreferences = "1.2.1"
+dcerpc = "0.12.13"
 gson = "2.14.0"
 kotlin = "2.4.10"
 composeBom = "2026.08.00"
 media3Exoplayer = "1.11.0"
 media3Ui = "1.11.0"
+smbj = "0.14.0"
 tvFoundation = "1.0.0"
 tvMaterial = "1.1.0"
 lifecycleRuntimeKtx = "2.11.0"
@@ -40,12 +42,14 @@ androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecyc
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
+dcerpc = { module = "com.rapid7.client:dcerpc", version.ref = "dcerpc" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 leakcanary = { group = "com.android.tools.studio.leakcanary", name = "leakcanary", version.ref = "leakcanary" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+smbj = { module = "com.hierynomus:smbj", version.ref = "smbj" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
