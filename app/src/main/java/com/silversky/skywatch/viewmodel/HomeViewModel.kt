@@ -5,19 +5,21 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.silversky.core.client.SmbClient
 import com.silversky.core.logger.Logger
 import com.silversky.core.smb.SmbScanner
 import com.silversky.core.smb.SmbServer
 import com.silversky.skywatch.manager.ConnectionManager
+import com.silversky.skywatch.manager.ConnectionState
 import com.silversky.skywatch.model.SavedServer
-import com.silversky.skywatch.persistence.ServerStore
+import com.silversky.skywatch.repository.ServerRepository
 import com.silversky.skywatch.ui.ScanResult
 import com.silversky.skywatch.ui.ServerConnectionInput
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 sealed interface DialogState {
@@ -36,16 +38,19 @@ sealed interface DialogState {
 class HomeViewModel
 @Inject
 constructor(
-    private val persistenceManager: ServerStore,
+    private val repository: ServerRepository,
     private val logger: Logger,
     private val connectionManager: ConnectionManager,
+    private val smbScanner: SmbScanner,
 ) : ViewModel() {
 
   var dialog by mutableStateOf<DialogState>(DialogState.None)
     private set
 
-  var servers by mutableStateOf<List<SavedServer>>(emptyList())
-    private set
+  val servers: StateFlow<List<SavedServer>> =
+      repository.servers.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+  val connectionState: StateFlow<ConnectionState> = connectionManager.connectionState
 
   var scanResults by mutableStateOf<List<ScanResult>>(emptyList())
     private set
@@ -55,19 +60,6 @@ constructor(
 
   var scanning by mutableStateOf(false)
     private set
-
-  init {
-    loadServers()
-  }
-
-  private fun loadServers() {
-    viewModelScope.launch(Dispatchers.IO) {
-      val loadedServers = persistenceManager.getServers()
-      withContext(Dispatchers.Main) {
-        servers = loadedServers
-      }
-    }
-  }
 
   fun addServer() {
     scanError = null
@@ -92,17 +84,17 @@ constructor(
     viewModelScope.launch(Dispatchers.IO) {
       try {
         logger.info("Starting SMB network scan")
-        val discoveredServers = SmbScanner().scanNetwork(logger)
+        val discoveredServers = smbScanner.scanNetwork(logger)
         val results = discoveredServers.map { server ->
           ScanResult(ip = server.ipAddress, name = server.name ?: server.ipAddress)
         }
-        withContext(Dispatchers.Main) {
+        launch(Dispatchers.Main) {
           scanResults = results
           scanning = false
         }
       } catch (e: Exception) {
         logger.error("SMB network scan failed", e)
-        withContext(Dispatchers.Main) {
+        launch(Dispatchers.Main) {
           scanning = false
           scanError = e.message ?: "Network scan failed"
         }
@@ -117,67 +109,46 @@ constructor(
 
   fun connect(input: ServerConnectionInput, onConnected: () -> Unit) {
     val server = SmbServer(name = input.name, ipAddress = input.address)
+    val saved = SavedServer(server, input.username, input.password, input.isGuest)
+
     logger.info("Connecting to ${server.ipAddress}")
+    scanError = null
 
-    viewModelScope.launch(Dispatchers.IO) {
-      val client = SmbClient(logger)
-      try {
-        client.connect(
-            server = server,
-            username = input.username,
-            password = input.password,
-            isGuest = input.isGuest,
-        )
-        val saved = SavedServer(server, input.username, input.password, input.isGuest)
+    viewModelScope.launch {
+      connectionManager.connect(saved)
+      val currentState = connectionManager.connectionState.value
 
-        val existingServers = persistenceManager.getServers()
-        if (existingServers.none { it.server.ipAddress == server.ipAddress }) {
-          persistenceManager.saveServer(saved)
+      if (currentState is ConnectionState.Connected) {
+        if (servers.value.none { it.server.ipAddress == server.ipAddress }) {
+          repository.addServer(saved)
         }
-        val updatedServers = persistenceManager.getServers()
-
-        withContext(Dispatchers.Main) {
-          connectionManager.onConnected(client, server)
-          servers = updatedServers
-          dialog = DialogState.None
-          onConnected()
-        }
-      } catch (e: Exception) {
-        logger.error("Failed to connect to ${server.ipAddress}", e)
-        client.close()
-        withContext(Dispatchers.Main) {
-          scanError = e.message ?: "Connection failed"
-        }
+        dialog = DialogState.None
+        onConnected()
+      } else if (currentState is ConnectionState.Error) {
+        scanError = currentState.message
       }
     }
   }
 
   fun selectServer(savedServer: SavedServer, onConnected: () -> Unit) {
-    connect(
-        ServerConnectionInput(
-            name = savedServer.server.name ?: "",
-            address = savedServer.server.ipAddress,
-            username = savedServer.username,
-            password = savedServer.password,
-            isGuest = savedServer.isGuest,
-        ),
-        onConnected,
-    )
+    viewModelScope.launch {
+      connectionManager.connect(savedServer)
+      if (connectionManager.connectionState.value is ConnectionState.Connected) {
+        onConnected()
+      } else if (connectionManager.connectionState.value is ConnectionState.Error) {
+        scanError = (connectionManager.connectionState.value as ConnectionState.Error).message
+      }
+    }
   }
 
   fun updateServer(input: ServerConnectionInput, oldServer: SmbServer) {
     val server = SmbServer(name = input.name, ipAddress = input.address)
-    viewModelScope.launch(Dispatchers.IO) {
+    val updated = SavedServer(server, input.username, input.password, input.isGuest)
+
+    viewModelScope.launch {
       try {
-        persistenceManager.updateServer(
-            SavedServer(server, input.username, input.password, input.isGuest),
-            oldServer,
-        )
-        val updatedServers = persistenceManager.getServers()
-        withContext(Dispatchers.Main) {
-          servers = updatedServers
-          dialog = DialogState.None
-        }
+        repository.updateServer(oldServer.ipAddress, updated)
+        dialog = DialogState.None
       } catch (e: Exception) {
         logger.error("Failed to update server", e)
       }
@@ -185,12 +156,8 @@ constructor(
   }
 
   fun deleteServer(server: SavedServer) {
-    viewModelScope.launch(Dispatchers.IO) {
-      persistenceManager.deleteServer(server.server)
-      val updatedServers = persistenceManager.getServers()
-      withContext(Dispatchers.Main) {
-        servers = updatedServers
-      }
+    viewModelScope.launch {
+      repository.deleteServer(server.server.ipAddress)
     }
   }
 }

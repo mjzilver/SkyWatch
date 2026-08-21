@@ -1,7 +1,9 @@
 package com.silversky.skywatch
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -34,8 +36,10 @@ fun SkyWatchApp(
   NavHost(navController = navController, startDestination = Routes.HOME) {
     composable(Routes.HOME) {
       val viewModel: HomeViewModel = hiltViewModel()
+      val servers by viewModel.servers.collectAsStateWithLifecycle()
+
       HomeScreen(
-          savedServers = viewModel.servers,
+          savedServers = servers,
           error = viewModel.scanError,
           onServerClick = { server ->
             logger.info("Saved server clicked")
@@ -128,15 +132,19 @@ fun SkyWatchApp(
             client = client,
             server = server,
             shareName = share,
+            currentPath = viewModel.currentPath,
             logger = logger,
             playbackStateStore = viewModel.playbackStateStore,
+            onPathChanged = { path ->
+              viewModel.navigateTo(path)
+            },
             onFileSelected = { file ->
               viewModel.selectFile(file) {
                 navController.navigate(Routes.PLAYER)
               }
             },
             onBack = {
-              viewModel.back {
+              viewModel.goBack {
                 navController.popBackStack()
               }
             },

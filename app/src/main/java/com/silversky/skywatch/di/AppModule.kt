@@ -2,19 +2,21 @@ package com.silversky.skywatch.di
 
 import android.content.Context
 import com.silversky.core.logger.Logger
+import com.silversky.core.smb.SmbScanner
 import com.silversky.skywatch.logger.AndroidLogger
 import com.silversky.skywatch.persistence.PlaybackStateStore
-import com.silversky.skywatch.persistence.ServerStore
+import com.silversky.skywatch.repository.PersistentServerRepository
+import com.silversky.skywatch.repository.ServerRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Qualifier
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import javax.inject.Qualifier
-import javax.inject.Singleton
 
 @Qualifier @Retention(AnnotationRetention.BINARY) annotation class ApplicationScope
 
@@ -28,14 +30,14 @@ object AppModule {
   fun provideApplicationScope(): CoroutineScope =
       CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-  @Provides
-  @Singleton
-  fun provideLogger(): Logger = AndroidLogger("SkyWatch")
+  @Provides @Singleton fun provideLogger(): Logger = AndroidLogger("SkyWatch")
 
   @Provides
   @Singleton
-  fun provideServerPersistenceManager(@ApplicationContext context: Context): ServerStore =
-      ServerStore(context)
+  fun provideServerRepository(@ApplicationContext context: Context): ServerRepository =
+      PersistentServerRepository(context)
+
+  @Provides @Singleton fun provideSmbScanner(): SmbScanner = SmbScanner()
 
   @Provides
   @Singleton

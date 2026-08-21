@@ -15,8 +15,7 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-  @Inject
-  lateinit var logger: Logger
+  @Inject lateinit var logger: Logger
 
   @OptIn(ExperimentalTvMaterial3Api::class)
   override fun onCreate(savedInstanceState: Bundle?) {

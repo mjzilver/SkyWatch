@@ -45,15 +45,13 @@ fun FileBrowserScreen(
     client: SmbClient,
     server: SmbServer,
     shareName: String,
+    currentPath: String,
     logger: Logger,
     playbackStateStore: PlaybackStateStore,
+    onPathChanged: (String) -> Unit,
     onFileSelected: (SmbEntry) -> Unit,
     onBack: () -> Unit,
 ) {
-  var currentPath by remember {
-    mutableStateOf("")
-  }
-
   var entries by remember {
     mutableStateOf<List<SmbEntry>>(emptyList())
   }
@@ -70,17 +68,8 @@ fun FileBrowserScreen(
     mutableStateOf<String?>(null)
   }
 
-  fun goBackDirectory() {
-    if (currentPath.isEmpty()) {
-      onBack()
-      return
-    }
-
-    currentPath = parentPath(currentPath)
-  }
-
   BackHandler {
-    goBackDirectory()
+    onBack()
   }
 
   LaunchedEffect(
@@ -98,7 +87,7 @@ fun FileBrowserScreen(
             client.list(
                 shareName = shareName,
                 path = currentPath,
-            )
+            ).filter { !it.isHidden }
           }
 
       logger.debug("Found ${entries.size} entries")
@@ -151,7 +140,7 @@ fun FileBrowserScreen(
             } else {
               "/$currentPath"
             },
-        onBack = ::goBackDirectory,
+        onBack = onBack,
     )
 
     Spacer(modifier = Modifier.height(32.dp))
@@ -193,7 +182,7 @@ fun FileBrowserScreen(
                 hasFinished = hasFinished,
                 onClick = {
                   if (entry.isDirectory) {
-                    currentPath = entry.path
+                    onPathChanged(entry.path)
                   } else {
                     onFileSelected(entry)
                   }
@@ -237,20 +226,5 @@ private fun FileEntryButton(
 
       Text(text = entry.name)
     }
-  }
-}
-
-private fun parentPath(path: String): String {
-  val normalized = path.trimEnd('\\')
-
-  val index = normalized.lastIndexOf('\\')
-
-  return if (index < 0) {
-    ""
-  } else {
-    normalized.substring(
-        0,
-        index,
-    )
   }
 }

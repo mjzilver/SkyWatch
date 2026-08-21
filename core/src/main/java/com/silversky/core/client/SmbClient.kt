@@ -119,6 +119,7 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
                   name = file.fileName,
                   path = filePath,
                   isDirectory = isDirectory(file),
+                  isHidden = isHidden(file),
               )
             }
       }
@@ -381,6 +382,15 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
         file.fileAttributes,
         FileAttributes.FILE_ATTRIBUTE_DIRECTORY,
     )
+  }
+
+  private fun isHidden(
+      file: FileIdBothDirectoryInformation,
+  ): Boolean {
+    val attributes = file.fileAttributes
+    return EnumWithValue.EnumUtils.isSet(attributes, FileAttributes.FILE_ATTRIBUTE_HIDDEN) ||
+        EnumWithValue.EnumUtils.isSet(attributes, FileAttributes.FILE_ATTRIBUTE_SYSTEM) ||
+        file.fileName.startsWith(".")
   }
 
   private fun isInterrupted(
