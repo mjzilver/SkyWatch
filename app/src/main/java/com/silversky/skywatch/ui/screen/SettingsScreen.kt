@@ -55,7 +55,7 @@ fun SettingsScreen(
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
       Text(
-          text = "Subtitle server",
+          text = "Subtitle server override",
           style = MaterialTheme.typography.titleLarge,
       )
 
@@ -65,7 +65,7 @@ fun SettingsScreen(
             addressInput = it
             viewModel.resetConnectionStatus()
           },
-          label = "Subtitle server address",
+          label = "Subtitle server address (leave empty to automatically discover)",
       )
 
       Spacer(modifier = Modifier.height(8.dp))
@@ -76,7 +76,7 @@ fun SettingsScreen(
           verticalAlignment = Alignment.CenterVertically,
       ) {
         Button(onClick = { viewModel.updateSubtitleServerAddress(addressInput) }) {
-          Text("Save address")
+          Text("Save")
         }
 
         Button(onClick = { viewModel.checkSubtitleServerAddress(addressInput) }) {
@@ -84,7 +84,7 @@ fun SettingsScreen(
         }
 
         Button(onClick = { viewModel.findSubtitleServer() }) {
-          Text("Resolve server")
+          Text("Automatically find server")
         }
       }
 

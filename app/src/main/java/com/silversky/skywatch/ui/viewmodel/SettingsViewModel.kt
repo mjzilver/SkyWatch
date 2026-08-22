@@ -2,13 +2,11 @@ package com.silversky.skywatch.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.silversky.skywatch.data.remote.SubtitleServerDiscovery
 import com.silversky.skywatch.data.repository.SettingsRepository
 import com.silversky.skywatch.data.repository.SubtitleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -38,7 +36,6 @@ class SettingsViewModel
 constructor(
     private val settingsRepository: SettingsRepository,
     private val subtitleRepository: SubtitleRepository,
-    private val subtitleServerDiscovery: SubtitleServerDiscovery,
 ) : ViewModel() {
 
   private val _connectionStatus =
@@ -49,6 +46,31 @@ constructor(
       settingsRepository.settings
           .map { it.subtitleServerAddress }
           .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+  init {
+    viewModelScope.launch {
+      subtitleRepository.isDiscovering.collect { discovering ->
+        if (discovering && _connectionStatus.value == SubtitleServerConnectionStatus.Idle) {
+          _connectionStatus.value = SubtitleServerConnectionStatus.Searching
+        } else if (
+            !discovering && _connectionStatus.value == SubtitleServerConnectionStatus.Searching
+        ) {
+          _connectionStatus.value = SubtitleServerConnectionStatus.Idle
+        }
+      }
+    }
+
+    viewModelScope.launch {
+      subtitleRepository.autoDiscoveredAddress.collect { address ->
+        if (
+            address != null && _connectionStatus.value == SubtitleServerConnectionStatus.Searching
+        ) {
+          _connectionStatus.value = SubtitleServerConnectionStatus.Connected
+          updateSubtitleServerAddress(address)
+        }
+      }
+    }
+  }
 
   fun updateSubtitleServerAddress(address: String) {
     viewModelScope.launch {
@@ -74,39 +96,14 @@ constructor(
     if (_connectionStatus.value == SubtitleServerConnectionStatus.Searching) return
 
     _connectionStatus.value = SubtitleServerConnectionStatus.Searching
+    subtitleRepository.startDiscovery()
 
-    val timeoutJob = viewModelScope.launch {
+    viewModelScope.launch {
       delay(10_000.milliseconds)
       if (_connectionStatus.value == SubtitleServerConnectionStatus.Searching) {
-        viewModelScope.launch(Dispatchers.IO) {
-          subtitleServerDiscovery.stop()
-        }
         _connectionStatus.value =
             SubtitleServerConnectionStatus.Error("Cannot resolve subtitle server")
       }
-    }
-
-    viewModelScope.launch(Dispatchers.IO) {
-      subtitleServerDiscovery.start { ip, port ->
-        viewModelScope.launch {
-          val fullAddress = "$ip:$port"
-          val isConnected = subtitleRepository.healthCheck(fullAddress)
-          if (isConnected && _connectionStatus.value == SubtitleServerConnectionStatus.Searching) {
-            timeoutJob.cancel()
-            viewModelScope.launch(Dispatchers.IO) {
-              subtitleServerDiscovery.stop()
-            }
-            updateSubtitleServerAddress(fullAddress)
-            _connectionStatus.value = SubtitleServerConnectionStatus.Connected
-          }
-        }
-      }
-    }
-  }
-
-  override fun onCleared() {
-    viewModelScope.launch(Dispatchers.IO) {
-      subtitleServerDiscovery.stop()
     }
   }
 }

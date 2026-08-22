@@ -17,6 +17,8 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
@@ -26,17 +28,63 @@ class SubtitleRepository
 constructor(
     private val logger: Logger,
     private val settingsRepository: SettingsRepository,
+    private val subtitleServerDiscovery: com.silversky.skywatch.data.remote.SubtitleServerDiscovery,
 ) {
-  private val _serverAddress = MutableStateFlow<String?>(null)
+  private val _autoDiscoveredAddress = MutableStateFlow<String?>(null)
+  val autoDiscoveredAddress: StateFlow<String?> = _autoDiscoveredAddress.asStateFlow()
 
+  private val _manualAddress = MutableStateFlow<String?>(null)
+  private val _serverAddress = MutableStateFlow<String?>(null)
   private val scope = CoroutineScope(Dispatchers.Main)
 
   init {
     scope.launch {
       settingsRepository.settings.collect { settings ->
-        _serverAddress.value = settings.subtitleServerAddress
+        val newManualAddress = settings.subtitleServerAddress?.takeIf { it.isNotBlank() }
+        _manualAddress.value = newManualAddress
+
+        if (newManualAddress != null) {
+          stopDiscovery()
+          _serverAddress.value = newManualAddress
+        } else {
+          _serverAddress.value = _autoDiscoveredAddress.value
+          startDiscovery()
+        }
       }
     }
+
+    scope.launch {
+      _autoDiscoveredAddress.collect { autoAddress ->
+        if (_manualAddress.value == null) {
+          _serverAddress.value = autoAddress
+        }
+      }
+    }
+  }
+
+  private val _isDiscovering = MutableStateFlow(false)
+  val isDiscovering: StateFlow<Boolean> = _isDiscovering.asStateFlow()
+
+  fun startDiscovery() {
+    if (_isDiscovering.value) return
+    _isDiscovering.value = true
+    logger.debug("Starting background subtitle server discovery")
+    subtitleServerDiscovery.start { ip, port ->
+      val address = "$ip:$port"
+      scope.launch {
+        if (healthCheck(address)) {
+          logger.info("Auto-discovered valid subtitle server: $address")
+          _autoDiscoveredAddress.value = address
+        }
+      }
+    }
+  }
+
+  fun stopDiscovery() {
+    if (!_isDiscovering.value) return
+    _isDiscovering.value = false
+    logger.debug("Stopping background subtitle server discovery")
+    subtitleServerDiscovery.stop()
   }
 
   private val client =
