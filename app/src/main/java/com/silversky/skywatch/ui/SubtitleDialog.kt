@@ -48,159 +48,158 @@ internal fun SubtitleDialog(
     onDismiss: () -> Unit,
     viewModel: SubtitleViewModel = hiltViewModel(),
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Local", "Online")
+  val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+  var selectedTabIndex by remember { mutableIntStateOf(0) }
+  val tabs = listOf("Local", "Online")
 
-    LaunchedEffect(player, filename) {
-        viewModel.initialize(player, filename)
-    }
+  LaunchedEffect(player, filename) {
+    viewModel.initialize(player, filename)
+  }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties =
-            DialogProperties(
-                dismissOnBackPress = true,
-                dismissOnClickOutside = true,
-            ),
+  Dialog(
+      onDismissRequest = onDismiss,
+      properties =
+          DialogProperties(
+              dismissOnBackPress = true,
+              dismissOnClickOutside = true,
+          ),
+  ) {
+    Column(
+        modifier =
+            Modifier.fillMaxWidth(0.8f)
+                .background(
+                    Color(0xFF202020),
+                    RoundedCornerShape(12.dp),
+                )
+                .padding(32.dp),
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth(0.8f)
-                    .background(
-                        Color(0xFF202020),
-                        RoundedCornerShape(12.dp),
-                    )
-                    .padding(32.dp),
-        ) {
+      Text(
+          text = "Subtitles",
+          style = MaterialTheme.typography.headlineSmall,
+          color = Color.White,
+      )
+
+      Spacer(modifier = Modifier.height(16.dp))
+
+      TabRow(
+          selectedTabIndex = selectedTabIndex,
+          modifier = Modifier.fillMaxWidth(),
+      ) {
+        tabs.forEachIndexed { index, title ->
+          Tab(
+              selected = selectedTabIndex == index,
+              onFocus = { selectedTabIndex = index },
+              onClick = { selectedTabIndex = index },
+          ) {
             Text(
-                text = "Subtitles",
-                style = MaterialTheme.typography.headlineSmall,
-                color = Color.White,
+                text = title,
+                modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
+                style = MaterialTheme.typography.labelLarge,
             )
+          }
+        }
+      }
 
-            Spacer(modifier = Modifier.height(16.dp))
+      Spacer(modifier = Modifier.height(20.dp))
 
-            TabRow(
-                selectedTabIndex = selectedTabIndex,
+      Column(modifier = Modifier.weight(1f, fill = false)) {
+        when (selectedTabIndex) {
+          0 -> { // Local
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTabIndex == index,
-                        onFocus = { selectedTabIndex = index },
-                        onClick = { selectedTabIndex = index },
-                    ) {
-                        Text(
-                            text = title,
-                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                    }
+              item {
+                TrackButton(
+                    text = "Off",
+                    selected = !player.currentTracks.isTypeSelected(C.TRACK_TYPE_TEXT),
+                    onClick = {
+                      viewModel.disableSubtitles()
+                      onDismiss()
+                    },
+                )
+              }
+
+              items(uiState.localTracks.indices.toList()) { groupIndex ->
+                val group = uiState.localTracks[groupIndex]
+                for (trackIndex in 0 until group.length) {
+                  val format = group.getTrackFormat(trackIndex)
+                  val label = format.label ?: format.language ?: "Track ${trackIndex + 1}"
+
+                  TrackButton(
+                      text = label,
+                      selected = group.isTrackSelected(trackIndex),
+                      onClick = {
+                        viewModel.selectTrack(groupIndex, trackIndex)
+                        onDismiss()
+                      },
+                  )
                 }
+              }
             }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Column(modifier = Modifier.weight(1f, fill = false)) {
-                when (selectedTabIndex) {
-                    0 -> { // Local
-                        LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            item {
-                                TrackButton(
-                                    text = "Off",
-                                    selected = !player.currentTracks.isTypeSelected(C.TRACK_TYPE_TEXT),
-                                    onClick = {
-                                        viewModel.disableSubtitles()
-                                        onDismiss()
-                                    },
-                                )
-                            }
-
-                            items(uiState.localTracks.indices.toList()) { groupIndex ->
-                                val group = uiState.localTracks[groupIndex]
-                                for (trackIndex in 0 until group.length) {
-                                    val format = group.getTrackFormat(trackIndex)
-                                    val label = format.label ?: format.language ?: "Track ${trackIndex + 1}"
-
-                                    TrackButton(
-                                        text = label,
-                                        selected = group.isTrackSelected(trackIndex),
-                                        onClick = {
-                                            viewModel.selectTrack(groupIndex, trackIndex)
-                                            onDismiss()
-                                        },
-                                    )
-                                }
-                            }
+          }
+          1 -> { // Online
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+              item {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                  PlayerButton(
+                      text = if (uiState.isSearching) "Searching..." else "Search Subtitle Server",
+                      onClick = { viewModel.searchOnline() },
+                      modifier = Modifier.fillMaxWidth(),
+                      content = {
+                        if (uiState.isSearching) {
+                          CircularProgressIndicator(
+                              modifier = Modifier.size(16.dp),
+                              strokeWidth = 2.dp,
+                              color = Color.White,
+                          )
                         }
-                    }
-                    1 -> { // Online
-                        LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            item {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                PlayerButton(
-                                    text = if (uiState.isSearching) "Searching..." else "Search Subtitle Server",
-                                    onClick = { viewModel.searchOnline() },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    content = {
-                                        if (uiState.isSearching) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(16.dp),
-                                                strokeWidth = 2.dp,
-                                                color = Color.White
-                                            )
-                                        }
-                                    }
-                                )
-                                }
-                            }
-
-                            val results = uiState.onlineSubtitles
-                            if (!uiState.isSearching && uiState.searchRequested && results != null) {
-                                if (results.isEmpty()) {
-                                    item {
-                                        Text(
-                                            text = "No online subtitles found.",
-                                            color = Color.LightGray,
-                                            modifier = Modifier.padding(vertical = 16.dp)
-                                        )
-                                    }
-                                } else {
-                                    items(results) { subtitle ->
-                                        TrackButton(
-                                            text = subtitle.name,
-                                            selected = false,
-                                            onClick = {
-                                                onDownloadSubtitle(subtitle)
-                                            },
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                      },
+                  )
                 }
+              }
+
+              val results = uiState.onlineSubtitles
+              if (!uiState.isSearching && uiState.searchRequested && results != null) {
+                if (results.isEmpty()) {
+                  item {
+                    Text(
+                        text = "No online subtitles found.",
+                        color = Color.LightGray,
+                        modifier = Modifier.padding(vertical = 16.dp),
+                    )
+                  }
+                } else {
+                  items(results) { subtitle ->
+                    TrackButton(
+                        text = subtitle.name,
+                        selected = false,
+                        onClick = {
+                          onDownloadSubtitle(subtitle)
+                        },
+                    )
+                  }
+                }
+              }
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            PlayerButton(
-                text = "Close",
-                onClick = onDismiss,
-                modifier = Modifier.align(Alignment.End)
-            )
+          }
         }
+      }
+
+      Spacer(modifier = Modifier.height(24.dp))
+
+      PlayerButton(
+          text = "Close",
+          onClick = onDismiss,
+          modifier = Modifier.align(Alignment.End),
+      )
     }
+  }
 }

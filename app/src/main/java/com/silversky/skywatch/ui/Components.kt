@@ -111,7 +111,6 @@ fun EmptyMessage(message: String) {
   }
 }
 
-
 @Composable
 fun TvTextField(
     value: String,
@@ -120,54 +119,54 @@ fun TvTextField(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-        )
+  Column(
+      modifier = Modifier.fillMaxWidth(),
+  ) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelLarge,
+    )
 
-        Spacer(modifier = Modifier.height(4.dp))
+    Spacer(modifier = Modifier.height(4.dp))
 
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            enabled = enabled,
-            singleLine = true,
-            textStyle =
-                MaterialTheme.typography.bodyLarge.copy(
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        enabled = enabled,
+        singleLine = true,
+        textStyle =
+            MaterialTheme.typography.bodyLarge.copy(
+                color =
+                    if (enabled) {
+                      MaterialTheme.colorScheme.onSurface
+                    } else {
+                      MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    },
+            ),
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(
+                    if (enabled) {
+                      MaterialTheme.colorScheme.surface
+                    } else {
+                      MaterialTheme.colorScheme.surface.copy(alpha = 0.38f)
+                    },
+                )
+                .border(
+                    width = 2.dp,
                     color =
                         if (enabled) {
-                            MaterialTheme.colorScheme.onSurface
+                          MaterialTheme.colorScheme.onSurfaceVariant
                         } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                          MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
                         },
+                )
+                .padding(
+                    horizontal = 14.dp,
+                    vertical = 12.dp,
                 ),
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            modifier =
-                modifier
-                    .fillMaxWidth()
-                    .background(
-                        if (enabled) {
-                            MaterialTheme.colorScheme.surface
-                        } else {
-                            MaterialTheme.colorScheme.surface.copy(alpha = 0.38f)
-                        },
-                    )
-                    .border(
-                        width = 2.dp,
-                        color =
-                            if (enabled) {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                            },
-                    )
-                    .padding(
-                        horizontal = 14.dp,
-                        vertical = 12.dp,
-                    ),
-        )
-    }
+    )
+  }
 }

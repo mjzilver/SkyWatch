@@ -42,8 +42,7 @@ class FilenameParserTest {
                 year = 1984,
             ),
             TestCase(
-                filename =
-                    "Taxi.Driver.(1976).REMASTERED.1080p.BluRay.6CH.2.5GB.MkvCage",
+                filename = "Taxi.Driver.(1976).REMASTERED.1080p.BluRay.6CH.2.5GB.MkvCage",
                 title = "Taxi Driver",
                 year = 1976,
             ),

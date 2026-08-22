@@ -45,13 +45,11 @@ fun SkyWatchApp(
           savedServers = servers,
           error = viewModel.scanError,
           onServerClick = { server ->
-            logger.info("Saved server clicked")
             viewModel.selectServer(server) {
               navController.navigate(Routes.SHARES)
             }
           },
           onEditServer = { server ->
-            logger.info("Edit server clicked: ${server.server.ipAddress}")
             viewModel.editServer(server)
           },
           onAddServer = {

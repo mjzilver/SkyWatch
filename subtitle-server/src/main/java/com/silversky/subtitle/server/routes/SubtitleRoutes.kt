@@ -1,6 +1,5 @@
 package com.silversky.subtitle.server.routes
 
-import com.silversky.subtitle.server.model.SubtitleResult
 import com.silversky.subtitle.server.model.SubtitleSearchResult
 import com.silversky.subtitle.server.model.toSearchResult
 import com.silversky.subtitle.server.service.SubtitleService

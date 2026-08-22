@@ -45,7 +45,7 @@ fun HomeScreen(
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top
+        verticalAlignment = Alignment.Top,
     ) {
       Column {
         Text(
@@ -62,7 +62,7 @@ fun HomeScreen(
       Button(onClick = onSettingsClick) {
         Icon(
             imageVector = Icons.Default.Settings,
-            contentDescription = "Settings"
+            contentDescription = "Settings",
         )
       }
     }

@@ -11,16 +11,17 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class SettingsViewModel @Inject constructor(
-    private val settingsManager: SettingsManager
-) : ViewModel() {
+class SettingsViewModel @Inject constructor(private val settingsManager: SettingsManager) :
+    ViewModel() {
 
-    val subtitleServerAddress = settingsManager.settings.map { it.subtitleServerAddress }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+  val subtitleServerAddress =
+      settingsManager.settings
+          .map { it.subtitleServerAddress }
+          .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    fun updateSubtitleServerAddress(address: String) {
-        viewModelScope.launch {
-            settingsManager.updateSettings { it.copy(subtitleServerAddress = address) }
-        }
+  fun updateSubtitleServerAddress(address: String) {
+    viewModelScope.launch {
+      settingsManager.updateSettings { it.copy(subtitleServerAddress = address) }
     }
+  }
 }

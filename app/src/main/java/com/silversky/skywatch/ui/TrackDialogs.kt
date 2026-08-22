@@ -232,8 +232,9 @@ internal fun findTrack(
 
     for (trackIndex in 0 until group.length) {
       val format = group.getTrackFormat(trackIndex)
+      val currentId = trackId(format)
 
-      if (trackId(format) == id) {
+      if (currentId == id || currentId.endsWith(":$id") || format.label == id) {
         return TrackSelection(
             group = group.mediaTrackGroup,
             index = trackIndex,

@@ -49,7 +49,6 @@ import com.silversky.skywatch.ui.theme.SubtitleOutline
 import com.silversky.skywatch.ui.theme.SubtitleText
 import com.silversky.skywatch.ui.theme.SubtitleWindow
 import com.silversky.skywatch.utils.buildSmbUri
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -139,8 +138,6 @@ fun PlayerScreen(
       bytes: ByteArray,
       name: String,
   ) {
-    logger.info("Saving external subtitle to cache: $name")
-
     val currentPosition = player.currentPosition
     val wasPlaying = player.isPlaying
 
@@ -161,8 +158,6 @@ fun PlayerScreen(
     try {
       subtitleFile.parentFile?.mkdirs()
       subtitleFile.writeBytes(bytes)
-
-      logger.debug("Subtitle saved to: ${subtitleFile.absolutePath}")
     } catch (e: Exception) {
       logger.error("Failed to save subtitle", e)
       return
@@ -184,35 +179,27 @@ fun PlayerScreen(
 
     player.prepare()
 
-    while (player.currentTracks.groups.isEmpty() && currentCoroutineContext().isActive) {
-      delay(100.milliseconds)
+    scope.launch {
+      val label = "[Cached] $name"
+
+      var selection: TrackSelection? = null
+      for (i in 0 until 10) {
+        selection = findTrack(player, C.TRACK_TYPE_TEXT, label)
+        if (selection != null) break
+        delay(100.milliseconds)
+      }
+
+      if (selection != null) {
+        player.trackSelectionParameters =
+            player.trackSelectionParameters
+                .buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                .setOverrideForType(
+                    TrackSelectionOverride(selection.group, listOf(selection.index))
+                )
+                .build()
+      }
     }
-
-    val label = "[Cached] $name"
-
-    findTrack(
-            player = player,
-            trackType = C.TRACK_TYPE_TEXT,
-            id = label,
-        )
-        ?.let { selection ->
-          logger.info("Selecting downloaded subtitle: $label")
-
-          player.trackSelectionParameters =
-              player.trackSelectionParameters
-                  .buildUpon()
-                  .setTrackTypeDisabled(
-                      C.TRACK_TYPE_TEXT,
-                      false,
-                  )
-                  .setOverrideForType(
-                      TrackSelectionOverride(
-                          selection.group,
-                          listOf(selection.index),
-                      )
-                  )
-                  .build()
-        } ?: logger.error("Downloaded subtitle track not found: $label")
 
     if (wasPlaying) {
       player.play()
@@ -639,16 +626,12 @@ fun PlayerScreen(
           player = player,
           filename = file.name,
           onDownloadSubtitle = { subtitle ->
-            logger.info("Subtitle selected for download: ${subtitle.name} (${subtitle.id})")
             scope.launch {
               try {
                 val bytes = subtitleServerManager.downloadSubtitle(subtitle.id)
                 if (bytes != null) {
-                  logger.info("Subtitle downloaded successfully, loading into player")
                   loadExternalSubtitle(bytes, subtitle.name)
                   showSubtitleMenu = false
-                } else {
-                  logger.error("Failed to download subtitle content")
                 }
               } catch (e: Exception) {
                 logger.error("Error during subtitle download or processing", e)

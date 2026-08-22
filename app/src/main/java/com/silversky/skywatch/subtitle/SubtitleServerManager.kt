@@ -23,93 +23,103 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class SubtitleServerManager @Inject constructor(
+class SubtitleServerManager
+@Inject
+constructor(
     private val logger: Logger,
-    private val settingsManager: SettingsManager
+    private val settingsManager: SettingsManager,
 ) {
-    private val _serverAddress = MutableStateFlow<String?>(null)
-    val serverAddress: StateFlow<String?> = _serverAddress.asStateFlow()
+  private val _serverAddress = MutableStateFlow<String?>(null)
+  val serverAddress: StateFlow<String?> = _serverAddress.asStateFlow()
 
-    private val scope = CoroutineScope(Dispatchers.Main)
+  private val scope = CoroutineScope(Dispatchers.Main)
 
-    init {
-        scope.launch {
-            settingsManager.settings.collect { settings ->
-                _serverAddress.value = settings.subtitleServerAddress
-            }
-        }
+  init {
+    scope.launch {
+      settingsManager.settings.collect { settings ->
+        _serverAddress.value = settings.subtitleServerAddress
+      }
     }
+  }
 
-    private val client = HttpClient(CIO) {
+  private val client =
+      HttpClient(CIO) {
         install(ContentNegotiation) {
-            json(Json {
+          json(
+              Json {
                 ignoreUnknownKeys = true
                 coerceInputValues = true
-            })
+              }
+          )
         }
         install(Logging) {
-            level = LogLevel.INFO
+          level = LogLevel.INFO
         }
-    }
+      }
 
-    private fun formatUrl(address: String, path: String): String {
-        val base = if (!address.startsWith("http://") && !address.startsWith("https://")) {
-            "http://$address"
-        } else {
-            address
-        }.removeSuffix("/")
-        
-        val cleanPath = path.removePrefix("/")
-        return "$base/$cleanPath"
-    }
-
-    suspend fun search(query: String): SubtitleSearchResult? {
-        val address = _serverAddress.value ?: return null
-        return try {
-            val response: HttpResponse = client.get(formatUrl(address, "api/search")) {
-                url {
-                    parameters.append("query", query)
-                }
-            }
-            if (response.status.isSuccess()) {
-                runCatching { response.body<SubtitleSearchResult>() }.getOrElse {
-                    runCatching {
-                        val list = response.body<List<SubtitleSearchResult>>()
-                        if (list.isNotEmpty()) {
-                            val first = list.first()
-                            SubtitleSearchResult(
-                                title = first.title,
-                                year = first.year,
-                                season = first.season,
-                                episode = first.episode,
-                                subtitles = list.flatMap { it.subtitles }.distinctBy { it.id }
-                            )
-                        } else null
-                    }.getOrNull()
-                }
+  private fun formatUrl(address: String, path: String): String {
+    val base =
+        if (!address.startsWith("http://") && !address.startsWith("https://")) {
+              "http://$address"
             } else {
-                logger.error("Subtitle search failed with status ${response.status}")
-                null
+              address
             }
-        } catch (e: Exception) {
-            logger.error("Failed to search subtitles for $query", e)
-            null
-        }
-    }
+            .removeSuffix("/")
 
-    suspend fun downloadSubtitle(id: String): ByteArray? {
-        val address = _serverAddress.value ?: return null
-        return try {
-            val response: HttpResponse = client.get(formatUrl(address, "api/request/$id"))
-            if (response.status.isSuccess()) {
-                response.body()
-            } else {
-                logger.error("Subtitle download failed with status ${response.status}")
-                null
+    val cleanPath = path.removePrefix("/")
+    return "$base/$cleanPath"
+  }
+
+  suspend fun search(query: String): SubtitleSearchResult? {
+    val address = _serverAddress.value ?: return null
+    return try {
+      val response: HttpResponse =
+          client.get(formatUrl(address, "api/search")) {
+            url {
+              parameters.append("query", query)
             }
-        } catch (e: Exception) {
-            logger.error("Failed to download subtitle $id", e)
-            null
-        }
+          }
+      if (response.status.isSuccess()) {
+        runCatching { response.body<SubtitleSearchResult>() }
+            .getOrElse {
+              runCatching {
+                val list = response.body<List<SubtitleSearchResult>>()
+                if (list.isNotEmpty()) {
+                  val first = list.first()
+                  SubtitleSearchResult(
+                      title = first.title,
+                      year = first.year,
+                      season = first.season,
+                      episode = first.episode,
+                      subtitles = list.flatMap { it.subtitles }.distinctBy { it.id },
+                  )
+                } else null
+              }
+                  .getOrNull()
+            }
+      } else {
+        logger.error("Subtitle search failed with status ${response.status}")
+        null
+      }
+    } catch (e: Exception) {
+      logger.error("Failed to search subtitles for $query", e)
+      null
     }
+  }
+
+  suspend fun downloadSubtitle(id: String): ByteArray? {
+    val address = _serverAddress.value ?: return null
+    return try {
+      val response: HttpResponse = client.get(formatUrl(address, "api/request/$id"))
+      if (response.status.isSuccess()) {
+        response.body()
+      } else {
+        logger.error("Subtitle download failed with status ${response.status}")
+        null
+      }
+    } catch (e: Exception) {
+      logger.error("Failed to download subtitle $id", e)
+      null
+    }
+  }
 }

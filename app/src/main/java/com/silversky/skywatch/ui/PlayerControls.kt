@@ -391,7 +391,7 @@ internal fun PlayerButton(
   ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
       Text(text)
       content?.invoke()

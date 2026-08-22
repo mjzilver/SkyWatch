@@ -80,17 +80,15 @@ fun FileBrowserScreen(
     error = null
 
     try {
-      logger.debug("Listing //$shareName/$currentPath")
-
       entries =
           withContext(Dispatchers.IO) {
-            client.list(
-                shareName = shareName,
-                path = currentPath,
-            ).filter { !it.isHidden }
+            client
+                .list(
+                    shareName = shareName,
+                    path = currentPath,
+                )
+                .filter { !it.isHidden }
           }
-
-      logger.debug("Found ${entries.size} entries")
     } catch (e: Exception) {
       logger.error(
           "Failed to list //$shareName/$currentPath",

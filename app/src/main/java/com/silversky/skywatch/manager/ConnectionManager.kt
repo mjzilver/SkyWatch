@@ -73,7 +73,6 @@ constructor(
           selectedFile = null
 
           _connectionState.value = ConnectionState.Connected(client, savedServer.server)
-          logger.info("Successfully connected to ${savedServer.server.ipAddress}")
         } catch (e: Exception) {
           logger.error("Failed to connect to ${savedServer.server.ipAddress}", e)
           client.close()
@@ -108,7 +107,6 @@ constructor(
     applicationScope.launch(Dispatchers.IO) {
       try {
         client?.close()
-        logger.info("SMB Client closed successfully")
       } catch (e: Exception) {
         logger.error("Error closing SMB Client", e)
       }
