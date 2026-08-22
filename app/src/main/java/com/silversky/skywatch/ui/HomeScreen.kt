@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -20,19 +22,18 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import com.silversky.skywatch.model.SavedServer
+import com.silversky.skywatch.viewmodel.HomeViewModel
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    savedServers: List<SavedServer>,
-    error: String?,
-    onServerClick: (SavedServer) -> Unit,
-    onEditServer: (SavedServer) -> Unit,
-    onAddServer: () -> Unit,
-    onDeleteServer: (SavedServer) -> Unit,
+    viewModel: HomeViewModel,
+    onServerConnected: () -> Unit,
     onSettingsClick: () -> Unit,
 ) {
+  val savedServers by viewModel.servers.collectAsState()
+  val error = viewModel.scanError
+
   Column(
       modifier =
           Modifier.fillMaxSize()
@@ -67,7 +68,7 @@ fun HomeScreen(
       }
     }
 
-    Button(onClick = onAddServer) {
+    Button(onClick = { viewModel.addServer() }) {
       Text("Add Server")
     }
 
@@ -98,7 +99,7 @@ fun HomeScreen(
             ) {
               Button(
                   onClick = {
-                    onServerClick(server)
+                    viewModel.selectServer(server, onServerConnected)
                   },
                   modifier = Modifier.weight(1f),
               ) {
@@ -114,7 +115,7 @@ fun HomeScreen(
 
               Button(
                   onClick = {
-                    onEditServer(server)
+                    viewModel.editServer(server)
                   },
                   modifier = Modifier.width(80.dp),
               ) {
@@ -123,7 +124,7 @@ fun HomeScreen(
 
               Button(
                   onClick = {
-                    onDeleteServer(server)
+                    viewModel.deleteServer(server)
                   },
                   modifier = Modifier.width(80.dp),
               ) {

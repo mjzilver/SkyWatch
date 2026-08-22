@@ -20,6 +20,7 @@ data class SubtitleUiState(
     val onlineSubtitles: List<SubtitleResult>? = null,
     val isSearching: Boolean = false,
     val searchRequested: Boolean = false,
+    val error: String? = null,
 )
 
 @HiltViewModel
@@ -48,15 +49,38 @@ constructor(private val subtitleServerManager: SubtitleServerManager) : ViewMode
   fun searchOnline() {
     if (_uiState.value.isSearching) return
 
-    _uiState.value = _uiState.value.copy(isSearching = true, searchRequested = true)
+    _uiState.value =
+        _uiState.value.copy(
+            isSearching = true,
+            searchRequested = true,
+            error = null,
+        )
 
     viewModelScope.launch {
-      val results = subtitleServerManager.search(filename)
-      _uiState.value =
-          _uiState.value.copy(
-              onlineSubtitles = results?.subtitles,
-              isSearching = false,
-          )
+      try {
+        val result = subtitleServerManager.search(filename)
+        if (result == null) {
+          _uiState.value =
+              _uiState.value.copy(
+                  onlineSubtitles = emptyList(),
+                  isSearching = false,
+                  error = "Subtitles not found",
+              )
+        } else {
+          _uiState.value =
+              _uiState.value.copy(
+                  onlineSubtitles = result.subtitles,
+                  isSearching = false,
+              )
+        }
+      } catch (e: Exception) {
+        _uiState.value =
+            _uiState.value.copy(
+                onlineSubtitles = emptyList(),
+                isSearching = false,
+                error = e.message ?: "Failed to search subtitles",
+            )
+      }
     }
   }
 

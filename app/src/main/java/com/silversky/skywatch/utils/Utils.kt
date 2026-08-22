@@ -1,5 +1,9 @@
 package com.silversky.skywatch.utils
 
+import java.net.Inet4Address
+import java.net.InetAddress
+import java.net.NetworkInterface
+
 internal fun formatTime(milliseconds: Long): String {
   if (milliseconds <= 0L) {
     return "00:00"
@@ -32,4 +36,13 @@ fun buildSmbUri(
     path: String,
 ): String {
   return "smb://$shareName/${path.replace('\\', '/').trimStart('/')}"
+}
+
+fun getLocalIpAddress(): InetAddress? {
+  return NetworkInterface.getNetworkInterfaces()
+      .toList()
+      .flatMap { it.inetAddresses.toList() }
+      .firstOrNull { address ->
+        !address.isLoopbackAddress && address is Inet4Address
+      }
 }

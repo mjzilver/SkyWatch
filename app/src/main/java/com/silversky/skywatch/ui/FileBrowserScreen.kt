@@ -19,10 +19,6 @@ import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -30,101 +26,29 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
-import com.silversky.core.client.SmbClient
-import com.silversky.core.logger.Logger
 import com.silversky.core.smb.SmbEntry
-import com.silversky.core.smb.SmbServer
-import com.silversky.skywatch.persistence.PlaybackState
-import com.silversky.skywatch.persistence.PlaybackStateStore
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.silversky.skywatch.viewmodel.FileBrowserViewModel
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun FileBrowserScreen(
-    client: SmbClient,
-    server: SmbServer,
-    shareName: String,
-    currentPath: String,
-    logger: Logger,
-    playbackStateStore: PlaybackStateStore,
-    onPathChanged: (String) -> Unit,
+    viewModel: FileBrowserViewModel,
     onFileSelected: (SmbEntry) -> Unit,
     onBack: () -> Unit,
 ) {
-  var entries by remember {
-    mutableStateOf<List<SmbEntry>>(emptyList())
-  }
-
-  var resumeEntries by remember {
-    mutableStateOf<Map<String, PlaybackState>>(emptyMap())
-  }
-
-  var loading by remember {
-    mutableStateOf(true)
-  }
-
-  var error by remember {
-    mutableStateOf<String?>(null)
-  }
+  val entries = viewModel.entries
+  val resumeEntries = viewModel.resumeEntries
+  val loading = viewModel.loading
+  val error = viewModel.error
+  val currentPath = viewModel.currentPath
+  val shareName = viewModel.shareName ?: ""
 
   BackHandler {
-    onBack()
+    viewModel.goBack(onBack)
   }
 
-  LaunchedEffect(
-      shareName,
-      currentPath,
-  ) {
-    loading = true
-    error = null
-
-    try {
-      entries =
-          withContext(Dispatchers.IO) {
-            client
-                .list(
-                    shareName = shareName,
-                    path = currentPath,
-                )
-                .filter { !it.isHidden }
-          }
-    } catch (e: Exception) {
-      logger.error(
-          "Failed to list //$shareName/$currentPath",
-          e,
-      )
-
-      entries = emptyList()
-      error = e.message ?: "Failed to load directory"
-    } finally {
-      loading = false
-    }
-  }
-
-  LaunchedEffect(
-      shareName,
-      currentPath,
-      entries,
-  ) {
-    resumeEntries =
-        withContext(Dispatchers.IO) {
-          entries
-              .filter { !it.isDirectory }
-              .mapNotNull { entry ->
-                val progress =
-                    playbackStateStore.get(
-                        ip = server.ipAddress,
-                        share = shareName,
-                        path = entry.path,
-                    )
-
-                progress?.let {
-                  entry.path to it
-                }
-              }
-              .toMap()
-        }
+  LaunchedEffect(Unit) {
+    viewModel.loadEntries()
   }
 
   Column(
@@ -138,7 +62,7 @@ fun FileBrowserScreen(
             } else {
               "/$currentPath"
             },
-        onBack = onBack,
+        onBack = { viewModel.goBack(onBack) },
     )
 
     Spacer(modifier = Modifier.height(32.dp))
@@ -149,7 +73,7 @@ fun FileBrowserScreen(
       }
 
       error != null -> {
-        ErrorMessage(error!!)
+        ErrorMessage(error)
       }
 
       entries.isEmpty() -> {
@@ -180,9 +104,9 @@ fun FileBrowserScreen(
                 hasFinished = hasFinished,
                 onClick = {
                   if (entry.isDirectory) {
-                    onPathChanged(entry.path)
+                    viewModel.navigateTo(entry.path)
                   } else {
-                    onFileSelected(entry)
+                    viewModel.selectFile(entry, onFileSelected)
                   }
                 },
             )

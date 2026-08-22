@@ -76,6 +76,10 @@ object SubtitleRoutes {
             contentType = ContentType.Text.Plain,
         )
       }
+
+      get("/api/health") {
+        call.respond("Ok")
+      }
     }
   }
 }

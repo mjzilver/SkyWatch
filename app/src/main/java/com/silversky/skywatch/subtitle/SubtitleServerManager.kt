@@ -15,8 +15,6 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
@@ -30,7 +28,6 @@ constructor(
     private val settingsManager: SettingsManager,
 ) {
   private val _serverAddress = MutableStateFlow<String?>(null)
-  val serverAddress: StateFlow<String?> = _serverAddress.asStateFlow()
 
   private val scope = CoroutineScope(Dispatchers.Main)
 
@@ -71,16 +68,18 @@ constructor(
   }
 
   suspend fun search(query: String): SubtitleSearchResult? {
-    val address = _serverAddress.value ?: return null
-    return try {
+    val address =
+        _serverAddress.value
+            ?: throw IllegalStateException("No available subtitle server (check settings)")
+    try {
       val response: HttpResponse =
           client.get(formatUrl(address, "api/search")) {
-            url {
-              parameters.append("query", query)
-            }
+            url { parameters.append("query", query) }
           }
       if (response.status.isSuccess()) {
-        runCatching { response.body<SubtitleSearchResult>() }
+        val result = runCatching {
+          response.body<SubtitleSearchResult>()
+        }
             .getOrElse {
               runCatching {
                 val list = response.body<List<SubtitleSearchResult>>()
@@ -97,29 +96,48 @@ constructor(
               }
                   .getOrNull()
             }
+
+        if (result == null || result.subtitles.isEmpty()) {
+          return null
+        }
+        return result
       } else {
         logger.error("Subtitle search failed with status ${response.status}")
-        null
+        throw Exception("Server error: ${response.status}")
       }
     } catch (e: Exception) {
+      if (e is IllegalStateException) throw e
       logger.error("Failed to search subtitles for $query", e)
-      null
+      throw Exception("No available subtitle server (check settings)")
     }
   }
 
-  suspend fun downloadSubtitle(id: String): ByteArray? {
-    val address = _serverAddress.value ?: return null
-    return try {
+  suspend fun downloadSubtitle(id: String): ByteArray {
+    val address =
+        _serverAddress.value
+            ?: throw IllegalStateException("No available subtitle server (check settings)")
+    try {
       val response: HttpResponse = client.get(formatUrl(address, "api/request/$id"))
       if (response.status.isSuccess()) {
-        response.body()
+        return response.body()
       } else {
         logger.error("Subtitle download failed with status ${response.status}")
-        null
+        throw Exception("Download failed: ${response.status}")
       }
     } catch (e: Exception) {
+      if (e is IllegalStateException) throw e
       logger.error("Failed to download subtitle $id", e)
-      null
+      throw Exception("No available subtitle server (check settings)")
+    }
+  }
+
+  suspend fun healthCheck(address: String): Boolean {
+    try {
+      val response: HttpResponse = client.get(formatUrl(address, "api/health"))
+      return response.status.isSuccess()
+    } catch (e: Exception) {
+      logger.error("Error during health check", e)
+      return false
     }
   }
 }

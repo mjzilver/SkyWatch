@@ -150,7 +150,7 @@ internal fun SubtitleDialog(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                   PlayerButton(
-                      text = if (uiState.isSearching) "Searching..." else "Search Subtitle Server",
+                      text = if (uiState.isSearching) "Searching..." else "Search subtitle server",
                       onClick = { viewModel.searchOnline() },
                       modifier = Modifier.fillMaxWidth(),
                       content = {
@@ -167,24 +167,34 @@ internal fun SubtitleDialog(
               }
 
               val results = uiState.onlineSubtitles
-              if (!uiState.isSearching && uiState.searchRequested && results != null) {
-                if (results.isEmpty()) {
+              val error = uiState.error
+
+              if (!uiState.isSearching && uiState.searchRequested) {
+                if (error != null) {
                   item {
                     Text(
-                        text = "No online subtitles found.",
-                        color = Color.LightGray,
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(vertical = 16.dp),
                     )
                   }
-                } else {
-                  items(results) { subtitle ->
-                    TrackButton(
-                        text = subtitle.name,
-                        selected = false,
-                        onClick = {
-                          onDownloadSubtitle(subtitle)
-                        },
-                    )
+                } else if (results != null) {
+                  if (results.isEmpty()) {
+                    item {
+                      Text(
+                          text = "No online subtitles found.",
+                          color = Color.LightGray,
+                          modifier = Modifier.padding(vertical = 16.dp),
+                      )
+                    }
+                  } else {
+                    items(results) { subtitle ->
+                      TrackButton(
+                          text = subtitle.name,
+                          selected = false,
+                          onClick = { onDownloadSubtitle(subtitle) },
+                      )
+                    }
                   }
                 }
               }

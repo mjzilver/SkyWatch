@@ -1,13 +1,10 @@
 package com.silversky.skywatch
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.silversky.core.logger.Logger
 import com.silversky.skywatch.ui.FileBrowserScreen
 import com.silversky.skywatch.ui.HomeScreen
 import com.silversky.skywatch.ui.PlayerScreen
@@ -31,32 +28,17 @@ object Routes {
 }
 
 @Composable
-fun SkyWatchApp(
-    logger: Logger,
-) {
+fun SkyWatchApp() {
   val navController = rememberNavController()
 
   NavHost(navController = navController, startDestination = Routes.HOME) {
     composable(Routes.HOME) {
       val viewModel: HomeViewModel = hiltViewModel()
-      val servers by viewModel.servers.collectAsStateWithLifecycle()
 
       HomeScreen(
-          savedServers = servers,
-          error = viewModel.scanError,
-          onServerClick = { server ->
-            viewModel.selectServer(server) {
-              navController.navigate(Routes.SHARES)
-            }
-          },
-          onEditServer = { server ->
-            viewModel.editServer(server)
-          },
-          onAddServer = {
-            viewModel.addServer()
-          },
-          onDeleteServer = { server ->
-            viewModel.deleteServer(server)
+          viewModel = viewModel,
+          onServerConnected = {
+            navController.navigate(Routes.SHARES)
           },
           onSettingsClick = {
             navController.navigate(Routes.SETTINGS)
@@ -97,91 +79,52 @@ fun SkyWatchApp(
 
     composable(Routes.SETTINGS) {
       val viewModel: SettingsViewModel = hiltViewModel()
-      val address by viewModel.subtitleServerAddress.collectAsStateWithLifecycle()
 
       SettingsScreen(
-          currentAddress = address,
-          onAddressSave = { viewModel.updateSubtitleServerAddress(it) },
+          viewModel = viewModel,
           onBack = { navController.popBackStack() },
       )
     }
 
     composable(Routes.SHARES) {
       val viewModel: SharesViewModel = hiltViewModel()
-      val client = viewModel.client
-      val server = viewModel.server
 
-      if (client != null && server != null) {
-        ShareScreen(
-            client = client,
-            server = server,
-            logger = logger,
-            onShareSelected = { share ->
-              viewModel.selectShare(share) {
-                navController.navigate(Routes.BROWSER)
-              }
-            },
-            onBack = {
-              viewModel.disconnect {
-                navController.popBackStack()
-              }
-            },
-        )
-      }
+      ShareScreen(
+          viewModel = viewModel,
+          onShareSelected = { share ->
+            navController.navigate(Routes.BROWSER)
+          },
+          onBack = {
+            viewModel.disconnect {
+              navController.popBackStack()
+            }
+          },
+      )
     }
 
     composable(Routes.BROWSER) {
       val viewModel: FileBrowserViewModel = hiltViewModel()
-      val client = viewModel.client
-      val server = viewModel.server
-      val share = viewModel.shareName
 
-      if (client != null && server != null && share != null) {
-        FileBrowserScreen(
-            client = client,
-            server = server,
-            shareName = share,
-            currentPath = viewModel.currentPath,
-            logger = logger,
-            playbackStateStore = viewModel.playbackStateStore,
-            onPathChanged = { path ->
-              viewModel.navigateTo(path)
-            },
-            onFileSelected = { file ->
-              viewModel.selectFile(file) {
-                navController.navigate(Routes.PLAYER)
-              }
-            },
-            onBack = {
-              viewModel.goBack {
-                navController.popBackStack()
-              }
-            },
-        )
-      }
+      FileBrowserScreen(
+          viewModel = viewModel,
+          onFileSelected = { file ->
+            navController.navigate(Routes.PLAYER)
+          },
+          onBack = {
+            navController.popBackStack()
+          },
+      )
     }
 
     composable(Routes.PLAYER) {
       val viewModel: PlayerViewModel = hiltViewModel()
-      val client = viewModel.client
-      val share = viewModel.shareName
-      val file = viewModel.file
 
-      if (client != null && share != null && file != null) {
-        PlayerScreen(
-            client = client,
-            shareName = share,
-            file = file,
-            logger = logger,
-            playbackStateStore = viewModel.playbackStateStore,
-            subtitleServerManager = viewModel.subtitleServerManager,
-            onBack = {
-              viewModel.back {
-                navController.popBackStack()
-              }
-            },
-        )
-      }
+      PlayerScreen(
+          viewModel = viewModel,
+          onBack = {
+            navController.popBackStack()
+          },
+      )
     }
   }
 }

@@ -12,63 +12,33 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
-import com.silversky.core.client.SmbClient
-import com.silversky.core.logger.Logger
-import com.silversky.core.smb.SmbServer
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.silversky.skywatch.viewmodel.SharesViewModel
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ShareScreen(
-    client: SmbClient,
-    server: SmbServer,
-    logger: Logger,
+    viewModel: SharesViewModel,
     onShareSelected: (String) -> Unit,
     onBack: () -> Unit,
 ) {
-  var shares by remember {
-    mutableStateOf<List<String>>(emptyList())
-  }
-
-  var loading by remember {
-    mutableStateOf(true)
-  }
-
-  var error by remember {
-    mutableStateOf<String?>(null)
-  }
+  val shares = viewModel.shares
+  val loading = viewModel.loading
+  val error = viewModel.error
+  val server = viewModel.server
 
   LaunchedEffect(Unit) {
-    try {
-      logger.debug("Loading shares from ${server.ipAddress}")
+    viewModel.loadShares()
+  }
 
-      shares =
-          withContext(Dispatchers.IO) {
-            client.listShares()
-          }
-
-      logger.info("Found ${shares.size} shares")
-    } catch (e: Exception) {
-      logger.error(
-          "Failed to list SMB shares",
-          e,
-      )
-
-      error = e.message ?: "Failed to load shares"
-    } finally {
-      loading = false
-    }
+  if (server == null) {
+    onBack()
+    return
   }
 
   Column(modifier = Modifier.fillMaxSize().padding(48.dp)) {
@@ -86,7 +56,7 @@ fun ShareScreen(
       }
 
       error != null -> {
-        ErrorMessage(error!!)
+        ErrorMessage(error)
       }
 
       shares.isEmpty() -> {
@@ -98,9 +68,7 @@ fun ShareScreen(
           shares.forEach { share ->
             Button(
                 onClick = {
-                  logger.info("Selected share: $share")
-
-                  onShareSelected(share)
+                  viewModel.selectShare(share, { onShareSelected(share) })
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
