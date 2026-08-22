@@ -2,4 +2,23 @@ package com.silversky.skywatch.model
 
 import kotlinx.serialization.Serializable
 
-@Serializable data class Settings(val subtitleServerAddress: String? = null)
+@Serializable
+enum class SortBy {
+  Name,
+  DateModified,
+  Size,
+}
+
+@Serializable
+enum class SortOrder {
+  Ascending,
+  Descending,
+}
+
+@Serializable
+data class Settings(
+    val subtitleServerAddress: String? = null,
+    val sortBy: SortBy = SortBy.Name,
+    val sortOrder: SortOrder = SortOrder.Ascending,
+    val foldersFirst: Boolean = false,
+)

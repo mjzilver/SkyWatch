@@ -119,6 +119,8 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
                   name = file.fileName,
                   path = filePath,
                   isDirectory = isDirectory(file),
+                  size = file.endOfFile,
+                  dateModified = file.lastWriteTime.toEpochMillis(),
                   isHidden = isHidden(file),
               )
             }

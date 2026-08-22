@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.silversky.skywatch.data.repository.SettingsRepository
 import com.silversky.skywatch.data.repository.SubtitleRepository
+import com.silversky.skywatch.model.SortBy
+import com.silversky.skywatch.model.SortOrder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
@@ -47,6 +49,13 @@ constructor(
           .map { it.subtitleServerAddress }
           .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+  val settings =
+      settingsRepository.settings.stateIn(
+          viewModelScope,
+          SharingStarted.WhileSubscribed(5000),
+          com.silversky.skywatch.model.Settings(),
+      )
+
   init {
     viewModelScope.launch {
       subtitleRepository.isDiscovering.collect { discovering ->
@@ -75,6 +84,24 @@ constructor(
   fun updateSubtitleServerAddress(address: String) {
     viewModelScope.launch {
       settingsRepository.updateSettings { it.copy(subtitleServerAddress = address) }
+    }
+  }
+
+  fun updateSortBy(sortBy: SortBy) {
+    viewModelScope.launch {
+      settingsRepository.updateSettings { it.copy(sortBy = sortBy) }
+    }
+  }
+
+  fun updateSortOrder(sortOrder: SortOrder) {
+    viewModelScope.launch {
+      settingsRepository.updateSettings { it.copy(sortOrder = sortOrder) }
+    }
+  }
+
+  fun updateFoldersFirst(foldersFirst: Boolean) {
+    viewModelScope.launch {
+      settingsRepository.updateSettings { it.copy(foldersFirst = foldersFirst) }
     }
   }
 

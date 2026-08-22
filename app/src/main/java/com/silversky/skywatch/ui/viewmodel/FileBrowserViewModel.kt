@@ -10,6 +10,9 @@ import com.silversky.core.smb.SmbEntry
 import com.silversky.skywatch.data.local.PlaybackState
 import com.silversky.skywatch.data.local.PlaybackStateStore
 import com.silversky.skywatch.data.remote.SmbConnectionManager
+import com.silversky.skywatch.data.repository.SettingsRepository
+import com.silversky.skywatch.model.SortBy
+import com.silversky.skywatch.model.SortOrder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +24,7 @@ class FileBrowserViewModel
 @Inject
 constructor(
     private val connectionManager: SmbConnectionManager,
+    private val settingsRepository: SettingsRepository,
     val playbackStateStore: PlaybackStateStore,
     private val logger: Logger,
 ) : ViewModel() {
@@ -49,6 +53,8 @@ constructor(
   val shareName
     get() = connectionManager.selectedShare
 
+  private var rawEntries: List<SmbEntry> = emptyList()
+
   fun loadEntries() {
     val client = client ?: return
     val shareName = shareName ?: return
@@ -65,6 +71,8 @@ constructor(
                     path = currentPath,
                 )
                 .filter { !it.isHidden }
+
+        rawEntries = result
 
         val resumeMap =
             result
@@ -84,19 +92,48 @@ constructor(
                 .toMap()
 
         withContext(Dispatchers.Main) {
-          entries = result
           resumeEntries = resumeMap
+          applySorting()
           loading = false
         }
       } catch (e: Exception) {
         logger.error("Failed to list //$shareName/$currentPath", e)
         withContext(Dispatchers.Main) {
+          rawEntries = emptyList()
           entries = emptyList()
           error = e.message ?: "Failed to load directory"
           loading = false
         }
       }
     }
+  }
+
+  init {
+    viewModelScope.launch {
+      settingsRepository.settings.collect {
+        if (!loading && rawEntries.isNotEmpty()) {
+          applySorting()
+        }
+      }
+    }
+  }
+
+  private fun applySorting() {
+    val settings = settingsRepository.settings.value
+    val sortedResult = rawEntries.sortedWith { a, b ->
+      if (settings.foldersFirst && a.isDirectory != b.isDirectory) {
+        if (a.isDirectory) -1 else 1
+      } else {
+        val comparison =
+            when (settings.sortBy) {
+              SortBy.Name -> a.name.compareTo(b.name, ignoreCase = true)
+              SortBy.DateModified -> a.dateModified.compareTo(b.dateModified)
+              SortBy.Size -> a.size.compareTo(b.size)
+            }
+        if (settings.sortOrder == SortOrder.Ascending) comparison else -comparison
+      }
+    }
+    entries = sortedResult
   }
 
   fun selectFile(file: SmbEntry, onFileSelected: (SmbEntry) -> Unit) {
