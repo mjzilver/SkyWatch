@@ -13,11 +13,13 @@ import com.silversky.skywatch.ui.HomeScreen
 import com.silversky.skywatch.ui.PlayerScreen
 import com.silversky.skywatch.ui.ScanDialog
 import com.silversky.skywatch.ui.ServerDialog
+import com.silversky.skywatch.ui.SettingsScreen
 import com.silversky.skywatch.ui.ShareScreen
 import com.silversky.skywatch.viewmodel.DialogState
 import com.silversky.skywatch.viewmodel.FileBrowserViewModel
 import com.silversky.skywatch.viewmodel.HomeViewModel
 import com.silversky.skywatch.viewmodel.PlayerViewModel
+import com.silversky.skywatch.viewmodel.SettingsViewModel
 import com.silversky.skywatch.viewmodel.SharesViewModel
 
 object Routes {
@@ -25,6 +27,7 @@ object Routes {
   const val SHARES = "shares"
   const val BROWSER = "browser"
   const val PLAYER = "player"
+  const val SETTINGS = "settings"
 }
 
 @Composable
@@ -56,6 +59,9 @@ fun SkyWatchApp(
           },
           onDeleteServer = { server ->
             viewModel.deleteServer(server)
+          },
+          onSettingsClick = {
+            navController.navigate(Routes.SETTINGS)
           },
       )
 
@@ -89,6 +95,17 @@ fun SkyWatchApp(
           }
         }
       }
+    }
+
+    composable(Routes.SETTINGS) {
+      val viewModel: SettingsViewModel = hiltViewModel()
+      val address by viewModel.subtitleServerAddress.collectAsStateWithLifecycle()
+
+      SettingsScreen(
+          currentAddress = address,
+          onAddressSave = { viewModel.updateSubtitleServerAddress(it) },
+          onBack = { navController.popBackStack() },
+      )
     }
 
     composable(Routes.SHARES) {
@@ -159,6 +176,7 @@ fun SkyWatchApp(
             file = file,
             logger = logger,
             playbackStateStore = viewModel.playbackStateStore,
+            subtitleServerManager = viewModel.subtitleServerManager,
             onBack = {
               viewModel.back {
                 navController.popBackStack()

@@ -39,16 +39,21 @@ import com.silversky.core.client.SmbClient
 import com.silversky.core.logger.Logger
 import com.silversky.core.smb.SmbEntry
 import com.silversky.skywatch.media.createSmbPlayer
+import com.silversky.skywatch.media.getSubtitleCacheDir
 import com.silversky.skywatch.media.prepareSmbMediaSource
 import com.silversky.skywatch.persistence.PlaybackState
 import com.silversky.skywatch.persistence.PlaybackStateStore
+import com.silversky.skywatch.subtitle.SubtitleServerManager
 import com.silversky.skywatch.ui.theme.SubtitleBackground
 import com.silversky.skywatch.ui.theme.SubtitleOutline
 import com.silversky.skywatch.ui.theme.SubtitleText
 import com.silversky.skywatch.ui.theme.SubtitleWindow
+import com.silversky.skywatch.utils.buildSmbUri
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.io.File
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(UnstableApi::class)
@@ -59,6 +64,7 @@ fun PlayerScreen(
     file: SmbEntry,
     logger: Logger,
     playbackStateStore: PlaybackStateStore,
+    subtitleServerManager: SubtitleServerManager,
     onBack: () -> Unit,
 ) {
   val context = LocalContext.current
@@ -126,6 +132,90 @@ fun PlayerScreen(
                   subtitleTrack = getSelectedSubtitleTrackId(player),
               ),
       )
+    }
+  }
+
+  suspend fun loadExternalSubtitle(
+      bytes: ByteArray,
+      name: String,
+  ) {
+    logger.info("Saving external subtitle to cache: $name")
+
+    val currentPosition = player.currentPosition
+    val wasPlaying = player.isPlaying
+
+    val videoUri =
+        buildSmbUri(
+            shareName = shareName,
+            path = file.path,
+        )
+
+    val cacheDir =
+        getSubtitleCacheDir(
+            context = context,
+            videoUri = videoUri,
+        )
+
+    val subtitleFile = File(cacheDir, name)
+
+    try {
+      subtitleFile.parentFile?.mkdirs()
+      subtitleFile.writeBytes(bytes)
+
+      logger.debug("Subtitle saved to: ${subtitleFile.absolutePath}")
+    } catch (e: Exception) {
+      logger.error("Failed to save subtitle", e)
+      return
+    }
+
+    val mediaSource =
+        prepareSmbMediaSource(
+            context = context,
+            smbClient = client,
+            shareName = shareName,
+            path = file.path,
+            logger = logger,
+        )
+
+    player.setMediaSource(
+        mediaSource,
+        currentPosition,
+    )
+
+    player.prepare()
+
+    while (player.currentTracks.groups.isEmpty() && currentCoroutineContext().isActive) {
+      delay(100.milliseconds)
+    }
+
+    val label = "[Cached] $name"
+
+    findTrack(
+            player = player,
+            trackType = C.TRACK_TYPE_TEXT,
+            id = label,
+        )
+        ?.let { selection ->
+          logger.info("Selecting downloaded subtitle: $label")
+
+          player.trackSelectionParameters =
+              player.trackSelectionParameters
+                  .buildUpon()
+                  .setTrackTypeDisabled(
+                      C.TRACK_TYPE_TEXT,
+                      false,
+                  )
+                  .setOverrideForType(
+                      TrackSelectionOverride(
+                          selection.group,
+                          listOf(selection.index),
+                      )
+                  )
+                  .build()
+        } ?: logger.error("Downloaded subtitle track not found: $label")
+
+    if (wasPlaying) {
+      player.play()
     }
   }
 
@@ -204,6 +294,7 @@ fun PlayerScreen(
 
       val mediaSource =
           prepareSmbMediaSource(
+              context = context,
               smbClient = client,
               shareName = shareName,
               path = file.path,
@@ -544,8 +635,26 @@ fun PlayerScreen(
     }
 
     if (showSubtitleMenu) {
-      SubtitleTrackDialog(
+      SubtitleDialog(
           player = player,
+          filename = file.name,
+          onDownloadSubtitle = { subtitle ->
+            logger.info("Subtitle selected for download: ${subtitle.name} (${subtitle.id})")
+            scope.launch {
+              try {
+                val bytes = subtitleServerManager.downloadSubtitle(subtitle.id)
+                if (bytes != null) {
+                  logger.info("Subtitle downloaded successfully, loading into player")
+                  loadExternalSubtitle(bytes, subtitle.name)
+                  showSubtitleMenu = false
+                } else {
+                  logger.error("Failed to download subtitle content")
+                }
+              } catch (e: Exception) {
+                logger.error("Error during subtitle download or processing", e)
+              }
+            }
+          },
           onDismiss = {
             savePlaybackState()
             showSubtitleMenu = false

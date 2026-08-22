@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import com.silversky.core.logger.Logger
 import com.silversky.skywatch.manager.ConnectionManager
 import com.silversky.skywatch.persistence.PlaybackStateStore
+import com.silversky.skywatch.subtitle.SubtitleServerManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
@@ -13,6 +14,7 @@ class PlayerViewModel
 constructor(
     private val connectionManager: ConnectionManager,
     val playbackStateStore: PlaybackStateStore,
+    val subtitleServerManager: SubtitleServerManager,
     private val logger: Logger,
 ) : ViewModel() {
 

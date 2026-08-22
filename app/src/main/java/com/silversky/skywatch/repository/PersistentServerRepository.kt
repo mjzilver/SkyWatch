@@ -2,14 +2,14 @@ package com.silversky.skywatch.repository
 
 import android.content.Context
 import android.util.Log
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.silversky.skywatch.model.SavedServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,7 +21,7 @@ constructor(
     private val context: Context,
 ) : ServerRepository {
 
-  private val gson = Gson()
+  private val json = Json { ignoreUnknownKeys = true }
   private val fileName = "saved_servers.json"
 
   private val _servers = MutableStateFlow<List<SavedServer>>(emptyList())
@@ -69,9 +69,8 @@ constructor(
         return
       }
 
-      val json = file.readText()
-      val type = object : TypeToken<List<SavedServer>>() {}.type
-      val loadedServers = gson.fromJson<List<SavedServer>>(json, type) ?: emptyList()
+      val jsonString = file.readText()
+      val loadedServers = json.decodeFromString<List<SavedServer>>(jsonString)
 
       _servers.value = loadedServers
       Log.d("ServerRepository", "Loaded ${loadedServers.size} servers")
@@ -83,9 +82,9 @@ constructor(
 
   private fun saveServersToDisk(serversToSave: List<SavedServer>) {
     try {
-      val json = gson.toJson(serversToSave)
+      val jsonString = json.encodeToString(serversToSave)
       val file = File(context.filesDir, fileName)
-      file.writeText(json)
+      file.writeText(jsonString)
 
       _servers.value = serversToSave
       Log.d("ServerRepository", "Saved ${serversToSave.size} servers")

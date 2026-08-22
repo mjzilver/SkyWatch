@@ -63,7 +63,6 @@ class SubtitleRepository(
     }
   }
 
-  /** Gets the cached media and all of its subtitles. */
   fun get(media: MediaInfo): CachedMedia? =
       transaction(database) {
         val mediaRow =
@@ -102,11 +101,30 @@ class SubtitleRepository(
         )
       }
 
-  /**
-   * Saves a media item and one of its subtitles.
-   *
-   * If the media already exists, the existing media is reused.
-   */
+  fun saveMedia(media: MediaInfo) {
+    transaction(database) {
+      val existingMedia =
+          Media.selectAll()
+              .where {
+                (Media.title eq media.title) and
+                    (Media.year eq media.year) and
+                    (Media.season eq media.season) and
+                    (Media.episode eq media.episode)
+              }
+              .singleOrNull()
+
+      if (existingMedia == null) {
+        Media.insert {
+          it[id] = UUID.randomUUID().toString()
+          it[title] = media.title
+          it[year] = media.year
+          it[season] = media.season
+          it[episode] = media.episode
+        }
+      }
+    }
+  }
+
   fun save(
       media: MediaInfo,
       name: String,
@@ -163,7 +181,6 @@ class SubtitleRepository(
     )
   }
 
-  /** Gets a specific subtitle and updates its last-used timestamp. */
   fun getSubtitle(id: String): CachedSubtitle? =
       transaction(database) {
         val row =
@@ -191,7 +208,6 @@ class SubtitleRepository(
         )
       }
 
-  /** Deletes a cached subtitle and its file. */
   fun deleteSubtitle(id: String) {
     transaction(database) {
       val row =

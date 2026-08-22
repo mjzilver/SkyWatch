@@ -26,3 +26,11 @@ internal fun formatTime(milliseconds: Long): String {
         )
   }
 }
+
+
+fun buildSmbUri(
+    shareName: String,
+    path: String,
+): String {
+    return "smb://$shareName/${path.replace('\\', '/').trimStart('/')}"
+}

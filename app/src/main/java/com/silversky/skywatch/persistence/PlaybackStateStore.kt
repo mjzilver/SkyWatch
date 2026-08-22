@@ -4,11 +4,14 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.google.gson.Gson
 import kotlinx.coroutines.flow.first
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 private val Context.playbackDataStore by preferencesDataStore(name = "playback_positions")
 
+@Serializable
 data class PlaybackState(
     val position: Long,
     val duration: Long,
@@ -17,7 +20,7 @@ data class PlaybackState(
 )
 
 class PlaybackStateStore(private val context: Context) {
-  private val gson = Gson()
+  private val json = Json { ignoreUnknownKeys = true }
 
   suspend fun get(
       ip: String,
@@ -26,9 +29,13 @@ class PlaybackStateStore(private val context: Context) {
   ): PlaybackState? {
     val key = stringPreferencesKey(key(ip, share, path))
 
-    val json = context.playbackDataStore.data.first()[key] ?: return null
+    val jsonString = context.playbackDataStore.data.first()[key] ?: return null
 
-    return gson.fromJson(json, PlaybackState::class.java)
+    return try {
+      json.decodeFromString<PlaybackState>(jsonString)
+    } catch (e: Exception) {
+      null
+    }
   }
 
   suspend fun save(
@@ -40,7 +47,7 @@ class PlaybackStateStore(private val context: Context) {
     val key = stringPreferencesKey(key(ip, share, path))
 
     context.playbackDataStore.edit { preferences ->
-      preferences[key] = gson.toJson(state)
+      preferences[key] = json.encodeToString(state)
     }
   }
 

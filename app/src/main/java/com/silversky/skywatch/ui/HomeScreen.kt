@@ -9,12 +9,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.silversky.skywatch.model.SavedServer
@@ -28,6 +31,7 @@ fun HomeScreen(
     onEditServer: (SavedServer) -> Unit,
     onAddServer: () -> Unit,
     onDeleteServer: (SavedServer) -> Unit,
+    onSettingsClick: () -> Unit,
 ) {
   Column(
       modifier =
@@ -38,16 +42,29 @@ fun HomeScreen(
               ),
       verticalArrangement = Arrangement.spacedBy(32.dp),
   ) {
-    Column {
-      Text(
-          text = "SKYWATCH",
-          style = MaterialTheme.typography.headlineLarge,
-      )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
+    ) {
+      Column {
+        Text(
+            text = "SKYWATCH",
+            style = MaterialTheme.typography.headlineLarge,
+        )
 
-      Text(
-          text = "SMB MEDIA PLAYER",
-          style = MaterialTheme.typography.bodyLarge,
-      )
+        Text(
+            text = "SMB MEDIA PLAYER",
+            style = MaterialTheme.typography.bodyLarge,
+        )
+      }
+
+      Button(onClick = onSettingsClick) {
+        Icon(
+            imageVector = Icons.Default.Settings,
+            contentDescription = "Settings"
+        )
+      }
     }
 
     Button(onClick = onAddServer) {

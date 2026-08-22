@@ -383,11 +383,18 @@ internal fun PlayerButton(
     text: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
+    content: @Composable (() -> Unit)? = null,
 ) {
   Button(
       onClick = onClick,
       modifier = modifier,
   ) {
-    Text(text)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+      Text(text)
+      content?.invoke()
+    }
   }
 }

@@ -43,4 +43,9 @@ object AppModule {
   @Singleton
   fun providePlaybackStateStore(@ApplicationContext context: Context): PlaybackStateStore =
       PlaybackStateStore(context)
+
+  @Provides
+  @Singleton
+  fun provideSettingsManager(@ApplicationContext context: Context): com.silversky.skywatch.settings.SettingsManager =
+      com.silversky.skywatch.settings.SettingsManager(context)
 }

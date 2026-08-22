@@ -6,7 +6,6 @@ datastorePreferences = "1.2.1"
 dcerpc = "0.12.13"
 exposedCore = "1.4.0"
 exposedJdbc = "1.4.0"
-gson = "2.14.0"
 jmdns = "3.6.3"
 kotlin = "2.4.10"
 composeBom = "2026.08.00"
@@ -54,7 +53,6 @@ androidx-compose-foundation = { group = "androidx.compose.foundation", name = "f
 dcerpc = { module = "com.rapid7.client:dcerpc", version.ref = "dcerpc" }
 exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposedCore" }
 exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposedJdbc" }
-gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktorSerializationKotlinxJson" }
@@ -71,6 +69,7 @@ sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqliteJdbc" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktorServerCore" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktorServerCore" }
 ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktorServerCore" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktorServerCore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

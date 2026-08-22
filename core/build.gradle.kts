@@ -1,6 +1,7 @@
 plugins {
   id("java-library")
   alias(libs.plugins.jetbrains.kotlin.jvm)
+  alias(libs.plugins.kotlin.serialization)
 }
 
 java {
@@ -13,6 +14,7 @@ kotlin { compilerOptions { jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget
 dependencies {
   implementation(libs.smbj)
   implementation(libs.dcerpc)
+  implementation(libs.kotlinx.serialization.json)
   implementation("eu.agno3.jcifs:jcifs-ng:2.1.9") {
     exclude(
         group = "org.bouncycastle",

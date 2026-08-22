@@ -3,6 +3,7 @@ plugins {
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.hilt)
   alias(libs.plugins.ksp)
+  alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -49,7 +50,6 @@ dependencies {
   implementation(project(":core"))
   implementation(libs.androidx.media3.exoplayer)
   implementation(libs.androidx.media3.ui)
-  implementation(libs.gson)
   implementation(libs.androidx.compose.material3)
   implementation(libs.androidx.datastore.preferences)
   debugImplementation(libs.leakcanary)
@@ -57,4 +57,10 @@ dependencies {
   ksp(libs.hilt.compiler)
   implementation(libs.hilt.navigation.compose)
   implementation(libs.androidx.navigation.compose)
+  implementation(libs.ktor.client.core)
+  implementation(libs.ktor.client.cio)
+  implementation(libs.ktor.client.logging)
+  implementation(libs.ktor.client.content.negotiation)
+  implementation(libs.ktor.serialization.kotlinx.json)
+  implementation(libs.kotlinx.serialization.json)
 }
