@@ -87,6 +87,12 @@ class FilenameParserTest {
                 title = "1917",
                 year = 2019,
             ),
+
+            // The first year is the title: no year
+            TestCase(
+                filename = "1917.1080p.BluRay",
+                title = "1917",
+            ),
         )
 
     for (case in testCases) {

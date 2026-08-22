@@ -11,12 +11,12 @@ import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
+import androidx.media3.common.Tracks
 import androidx.media3.exoplayer.ExoPlayer
 import com.silversky.core.logger.Logger
 import com.silversky.skywatch.manager.ConnectionManager
 import com.silversky.skywatch.media.createSmbPlayer
 import com.silversky.skywatch.media.getSubtitleCacheDir
-import androidx.media3.common.Tracks
 import com.silversky.skywatch.media.prepareSmbMediaItem
 import com.silversky.skywatch.persistence.PlaybackState
 import com.silversky.skywatch.persistence.PlaybackStateStore
@@ -48,11 +48,12 @@ constructor(
     private val logger: Logger,
 ) : ViewModel() {
 
-  val player: ExoPlayer = createSmbPlayer(
-      context,
-      connectionManager.smbClient!!,
-      logger,
-  )
+  val player: ExoPlayer =
+      createSmbPlayer(
+          context,
+          connectionManager.smbClient!!,
+          logger,
+      )
 
   var loading by mutableStateOf(true)
     private set

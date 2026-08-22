@@ -11,7 +11,6 @@ data class Config(
 
 @Serializable
 data class MdnsConfig(
-    val enabled: Boolean = true,
-    val service: String = "_skywatch-subtitle._tcp.local.",
-    val name: String = "SkyWatch Subtitle Server",
+    val service: String,
+    val name: String,
 )

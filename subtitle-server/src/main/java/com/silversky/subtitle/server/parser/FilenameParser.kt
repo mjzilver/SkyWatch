@@ -21,12 +21,16 @@ class FilenameParser(
             }
             ?.first
 
-    val titleEndIndex =
+    var titleEndIndex =
         listOfNotNull(
                 yearIndex,
                 seasonEpisodeIndex,
             )
             .minOrNull() ?: tokens.size
+
+    if (titleEndIndex == 0 && yearIndex == 0) {
+      titleEndIndex = 1
+    }
 
     val titleTokens =
         tokens.take(titleEndIndex).filter {
@@ -43,7 +47,7 @@ class FilenameParser(
         }
 
     val year = yearIndex?.let {
-      (tokens[it] as Token.Number).value
+      if (it < titleEndIndex) null else (tokens[it] as Token.Number).value
     }
 
     return MediaInfo(

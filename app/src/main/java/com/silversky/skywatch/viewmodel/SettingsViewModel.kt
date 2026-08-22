@@ -20,15 +20,10 @@ import kotlin.time.Duration.Companion.milliseconds
 
 sealed interface SubtitleServerConnectionStatus {
   data object Idle : SubtitleServerConnectionStatus
-
   data object Testing : SubtitleServerConnectionStatus
-
   data object Connected : SubtitleServerConnectionStatus
-
   data object NotConnected : SubtitleServerConnectionStatus
-
   data object Searching : SubtitleServerConnectionStatus
-
   data class Error(val message: String) : SubtitleServerConnectionStatus
 }
 
