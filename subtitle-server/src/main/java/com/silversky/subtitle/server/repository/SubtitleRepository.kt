@@ -3,6 +3,9 @@ package com.silversky.subtitle.server.repository
 import com.silversky.subtitle.server.model.CachedMedia
 import com.silversky.subtitle.server.model.CachedSubtitle
 import com.silversky.subtitle.server.model.MediaInfo
+import java.io.File
+import java.util.UUID
+import kotlin.time.Clock
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -13,9 +16,6 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
-import java.io.File
-import java.util.UUID
-import kotlin.time.Clock
 
 class SubtitleRepository(
     databasePath: String = "cache/subtitles.db",

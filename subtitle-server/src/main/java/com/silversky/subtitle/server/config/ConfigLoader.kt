@@ -1,8 +1,8 @@
 package com.silversky.subtitle.server.config
 
 import com.silversky.subtitle.server.model.Config
-import kotlinx.serialization.json.Json
 import java.io.File
+import kotlinx.serialization.json.Json
 
 object ConfigLoader {
   fun load(path: String = "config/config.json"): Config {

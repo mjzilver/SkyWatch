@@ -6,6 +6,8 @@ import com.silversky.skywatch.data.remote.SubtitleServerDiscovery
 import com.silversky.skywatch.data.repository.SettingsRepository
 import com.silversky.skywatch.data.repository.SubtitleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,8 +17,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import kotlin.time.Duration.Companion.milliseconds
 
 sealed interface SubtitleServerConnectionStatus {
   data object Idle : SubtitleServerConnectionStatus

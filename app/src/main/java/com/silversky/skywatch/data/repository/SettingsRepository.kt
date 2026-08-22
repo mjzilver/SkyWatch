@@ -3,15 +3,15 @@ package com.silversky.skywatch.data.repository
 import android.content.Context
 import android.util.Log
 import com.silversky.skywatch.model.Settings
+import java.io.File
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import java.io.File
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
 class SettingsRepository @Inject constructor(private val context: Context) {

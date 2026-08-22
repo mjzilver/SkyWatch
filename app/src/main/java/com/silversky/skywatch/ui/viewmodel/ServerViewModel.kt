@@ -11,8 +11,8 @@ import com.silversky.skywatch.data.repository.ServerRepository
 import com.silversky.skywatch.model.SavedServer
 import com.silversky.skywatch.ui.component.ServerConnectionInput
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.launch
 
 @HiltViewModel
 class ServerViewModel

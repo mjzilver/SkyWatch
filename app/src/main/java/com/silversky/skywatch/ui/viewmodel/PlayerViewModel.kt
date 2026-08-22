@@ -27,14 +27,14 @@ import com.silversky.skywatch.ui.component.getSelectedTrackId
 import com.silversky.skywatch.utils.buildSmbUri
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import javax.inject.Inject
-import kotlin.time.Duration.Companion.milliseconds
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @HiltViewModel
@@ -111,6 +111,10 @@ constructor(
                             }
                         }"
             )
+          }
+
+          override fun onIsPlayingChanged(isPlaying: Boolean) {
+            this@PlayerViewModel.isPlaying = isPlaying
           }
 
           override fun onPlayerError(playbackException: PlaybackException) {
@@ -236,7 +240,6 @@ constructor(
       while (isActive) {
         position = player.currentPosition.coerceAtLeast(0L)
         duration = player.duration.takeIf { it > 0L } ?: 0L
-        isPlaying = player.isPlaying
         delay(250L.milliseconds)
       }
     }
@@ -383,7 +386,6 @@ constructor(
   }
 
   override fun onCleared() {
-    super.onCleared()
     logger.debug("Releasing player")
     savePlaybackState()
     player.stop()

@@ -15,10 +15,10 @@ import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.statement.bodyAsText
-import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.zip.ZipInputStream
+import kotlinx.serialization.json.Json
 
 class SubtitleService(
     private val config: Config,

@@ -10,11 +10,11 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.silversky.skywatch.data.repository.SubtitleRepository
 import com.silversky.skywatch.model.SubtitleResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class SubtitleUiState(
     val localTracks: List<Tracks.Group> = emptyList(),

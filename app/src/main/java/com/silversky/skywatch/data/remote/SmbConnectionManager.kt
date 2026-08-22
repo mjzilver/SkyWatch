@@ -9,6 +9,8 @@ import com.silversky.core.smb.SmbEntry
 import com.silversky.core.smb.SmbServer
 import com.silversky.skywatch.di.ApplicationScope
 import com.silversky.skywatch.model.SavedServer
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,8 +18,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 sealed interface ConnectionState {
   data object Disconnected : ConnectionState

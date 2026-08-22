@@ -9,9 +9,9 @@ import com.silversky.core.logger.Logger
 import com.silversky.core.smb.SmbScanner
 import com.silversky.skywatch.ui.component.ScanResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltViewModel
 class ScanViewModel

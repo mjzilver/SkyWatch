@@ -40,12 +40,12 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.Text
 import com.silversky.core.smb.SmbEntry
 import com.silversky.skywatch.utils.formatTime
+import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
-import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 internal fun PlaybackErrorOverlay(

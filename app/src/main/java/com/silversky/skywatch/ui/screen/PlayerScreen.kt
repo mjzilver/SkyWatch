@@ -32,6 +32,7 @@ import com.silversky.skywatch.ui.theme.SubtitleOutline
 import com.silversky.skywatch.ui.theme.SubtitleText
 import com.silversky.skywatch.ui.theme.SubtitleWindow
 import com.silversky.skywatch.ui.viewmodel.PlayerViewModel
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -61,7 +62,7 @@ fun PlayerScreen(
             !viewModel.showSubtitleMenu &&
             !viewModel.showSpeedMenu
     ) {
-      delay(5_000L)
+      delay(5_000L.milliseconds)
       viewModel.controlsVisible = false
     }
   }
@@ -142,7 +143,6 @@ fun PlayerScreen(
           PlayerView(viewContext).apply {
             useController = false
             setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
-            keepScreenOn = true
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
               focusable = View.FOCUSABLE
             }
@@ -164,6 +164,7 @@ fun PlayerScreen(
         },
         update = { view ->
           view.player = player
+          view.keepScreenOn = isPlaying
         },
     )
 

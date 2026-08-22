@@ -11,11 +11,11 @@ import com.silversky.skywatch.data.repository.ServerRepository
 import com.silversky.skywatch.model.SavedServer
 import com.silversky.skywatch.ui.component.ScanResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 sealed interface DialogState {
   data object None : DialogState
@@ -42,9 +42,6 @@ constructor(
 
   val servers: StateFlow<List<SavedServer>> =
       repository.servers.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-  val connectionState: StateFlow<ConnectionState> = connectionManager.connectionState
-
   var scanError by mutableStateOf<String?>(null)
     private set
 
