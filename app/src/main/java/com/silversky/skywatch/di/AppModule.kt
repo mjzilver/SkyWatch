@@ -3,10 +3,11 @@ package com.silversky.skywatch.di
 import android.content.Context
 import com.silversky.core.logger.Logger
 import com.silversky.core.smb.SmbScanner
+import com.silversky.skywatch.data.local.PlaybackStateStore
+import com.silversky.skywatch.data.repository.PersistentServerRepository
+import com.silversky.skywatch.data.repository.ServerRepository
+import com.silversky.skywatch.data.repository.SettingsRepository
 import com.silversky.skywatch.logger.AndroidLogger
-import com.silversky.skywatch.persistence.PlaybackStateStore
-import com.silversky.skywatch.repository.PersistentServerRepository
-import com.silversky.skywatch.repository.ServerRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -46,8 +47,6 @@ object AppModule {
 
   @Provides
   @Singleton
-  fun provideSettingsManager(
-      @ApplicationContext context: Context
-  ): com.silversky.skywatch.settings.SettingsManager =
-      com.silversky.skywatch.settings.SettingsManager(context)
+  fun provideSettingsRepository(@ApplicationContext context: Context): SettingsRepository =
+      SettingsRepository(context)
 }

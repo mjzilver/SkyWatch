@@ -8,7 +8,7 @@ The goal is to provide a simple, TV-friendly media browser that can connect to n
 
 ## Subtitle Server
 
-yWatch can provide subtitles from the internet through a small, independently running Subtitle Server.
+SkyWatch can provide subtitles from the internet through an independently running Subtitle Server.
 
 The Subtitle Server requires a SubDL API key to retrieve subtitles. The API key is kept outside of the Android application, so the Subtitle Server runs separately from SkyWatch rather than being bundled into the APK.
 

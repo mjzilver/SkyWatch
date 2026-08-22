@@ -1,23 +1,26 @@
 package com.silversky.skywatch
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.silversky.skywatch.ui.FileBrowserScreen
-import com.silversky.skywatch.ui.HomeScreen
-import com.silversky.skywatch.ui.PlayerScreen
-import com.silversky.skywatch.ui.ScanDialog
-import com.silversky.skywatch.ui.ServerDialog
-import com.silversky.skywatch.ui.SettingsScreen
-import com.silversky.skywatch.ui.ShareScreen
-import com.silversky.skywatch.viewmodel.DialogState
-import com.silversky.skywatch.viewmodel.FileBrowserViewModel
-import com.silversky.skywatch.viewmodel.HomeViewModel
-import com.silversky.skywatch.viewmodel.PlayerViewModel
-import com.silversky.skywatch.viewmodel.SettingsViewModel
-import com.silversky.skywatch.viewmodel.SharesViewModel
+import com.silversky.skywatch.ui.component.ScanDialog
+import com.silversky.skywatch.ui.component.ServerDialog
+import com.silversky.skywatch.ui.screen.FileBrowserScreen
+import com.silversky.skywatch.ui.screen.HomeScreen
+import com.silversky.skywatch.ui.screen.PlayerScreen
+import com.silversky.skywatch.ui.screen.SettingsScreen
+import com.silversky.skywatch.ui.screen.ShareScreen
+import com.silversky.skywatch.ui.viewmodel.DialogState
+import com.silversky.skywatch.ui.viewmodel.FileBrowserViewModel
+import com.silversky.skywatch.ui.viewmodel.HomeViewModel
+import com.silversky.skywatch.ui.viewmodel.PlayerViewModel
+import com.silversky.skywatch.ui.viewmodel.ScanViewModel
+import com.silversky.skywatch.ui.viewmodel.ServerViewModel
+import com.silversky.skywatch.ui.viewmodel.SettingsViewModel
+import com.silversky.skywatch.ui.viewmodel.SharesViewModel
 
 object Routes {
   const val HOME = "home"
@@ -49,13 +52,16 @@ fun SkyWatchApp() {
       if (dialog != DialogState.None) {
         when (dialog) {
           is DialogState.Server -> {
+            val serverViewModel: ServerViewModel = hiltViewModel()
             val server = dialog.editingServer
             ServerDialog(
                 onDismiss = { viewModel.dismissDialog() },
                 onSave = { input ->
-                  viewModel.saveServer(input, server?.server?.ipAddress)
+                  serverViewModel.saveServer(input, server?.server?.ipAddress) {
+                    viewModel.dismissDialog()
+                  }
                 },
-                onScan = { viewModel.scanNetwork() },
+                onScan = { viewModel.openScan() },
                 initialAddress = server?.server?.ipAddress ?: dialog.scannedAddress,
                 initialName = server?.server?.name ?: dialog.scannedName,
                 initialUsername = server?.username ?: "",
@@ -65,12 +71,16 @@ fun SkyWatchApp() {
             )
           }
           DialogState.Scan -> {
+            val scanViewModel: ScanViewModel = hiltViewModel()
+            LaunchedEffect(Unit) {
+              scanViewModel.scanNetwork()
+            }
             ScanDialog(
                 onDismiss = { viewModel.dismissDialog() },
                 onServerSelected = { result ->
                   viewModel.selectScannedServer(result)
                 },
-                servers = viewModel.scanResults,
+                servers = scanViewModel.scanResults,
             )
           }
         }

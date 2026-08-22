@@ -9,7 +9,6 @@ class FilenameParser(
   fun parse(filename: String): MediaInfo {
     val tokens =
         filename.split(".", " ", "_", "-").filter { it.isNotBlank() }.map(classifier::classify)
-
     val seasonEpisode = tokens.filterIsInstance<Token.SeasonEpisode>().firstOrNull()
     val seasonEpisodeIndex = tokens.indexOfFirst { it is Token.SeasonEpisode }.takeIf { it >= 0 }
 
