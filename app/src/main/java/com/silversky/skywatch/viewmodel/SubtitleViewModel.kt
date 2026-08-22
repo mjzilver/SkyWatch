@@ -3,6 +3,7 @@ package com.silversky.skywatch.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
+import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.exoplayer.ExoPlayer
@@ -34,10 +35,26 @@ constructor(private val subtitleServerManager: SubtitleServerManager) : ViewMode
   private var player: ExoPlayer? = null
   private var filename: String = ""
 
+  private val playerListener =
+      object : Player.Listener {
+        override fun onTracksChanged(tracks: Tracks) {
+          updateLocalTracks()
+        }
+      }
+
   fun initialize(player: ExoPlayer, filename: String) {
-    this.player = player
+    if (this.player != player) {
+      this.player?.removeListener(playerListener)
+      this.player = player
+      player.addListener(playerListener)
+    }
     this.filename = filename
     updateLocalTracks()
+  }
+
+  override fun onCleared() {
+    player?.removeListener(playerListener)
+    player = null
   }
 
   fun updateLocalTracks() {

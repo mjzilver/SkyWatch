@@ -8,7 +8,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import com.silversky.core.client.SmbClient
 import com.silversky.core.logger.Logger
@@ -24,13 +23,13 @@ fun getSubtitleCacheDir(context: Context, videoUri: String): File {
 }
 
 @OptIn(UnstableApi::class)
-suspend fun prepareSmbMediaSource(
+suspend fun prepareSmbMediaItem(
     context: Context,
     smbClient: SmbClient,
     shareName: String,
     path: String,
     logger: Logger,
-): MediaSource {
+): MediaItem {
   return withContext(Dispatchers.IO) {
     val file =
         smbClient.openFile(
@@ -101,25 +100,19 @@ suspend fun prepareSmbMediaSource(
           emptyList()
         }
 
-    val mediaItem =
-        MediaItem.Builder()
-            .setUri(videoUri)
-            .setSubtitleConfigurations(smbSubtitles + cachedSubtitles)
-            .build()
-
-    val smbDataSourceFactory = SmbDataSourceFactory(smbClient, logger)
-    val dataSourceFactory =
-        androidx.media3.datasource.DefaultDataSource.Factory(
-            context,
-            smbDataSourceFactory,
-        )
-
-    DefaultMediaSourceFactory(dataSourceFactory).createMediaSource(mediaItem)
+    MediaItem.Builder()
+        .setUri(videoUri)
+        .setSubtitleConfigurations(smbSubtitles + cachedSubtitles)
+        .build()
   }
 }
 
 @OptIn(UnstableApi::class)
-fun createSmbPlayer(context: Context): ExoPlayer {
+fun createSmbPlayer(
+    context: Context,
+    smbClient: SmbClient,
+    logger: Logger,
+): ExoPlayer {
   val trackSelector = DefaultTrackSelector(context)
 
   val loadControl =
@@ -134,9 +127,19 @@ fun createSmbPlayer(context: Context): ExoPlayer {
           .setPrioritizeTimeOverSizeThresholds(false)
           .build()
 
+  val smbDataSourceFactory = SmbDataSourceFactory(smbClient, logger)
+  val dataSourceFactory =
+      androidx.media3.datasource.DefaultDataSource.Factory(
+          context,
+          smbDataSourceFactory,
+      )
+
+  val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory)
+
   return ExoPlayer.Builder(context)
       .setTrackSelector(trackSelector)
       .setLoadControl(loadControl)
+      .setMediaSourceFactory(mediaSourceFactory)
       .build()
 }
 

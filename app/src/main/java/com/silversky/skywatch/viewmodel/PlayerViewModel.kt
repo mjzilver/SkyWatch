@@ -16,7 +16,8 @@ import com.silversky.core.logger.Logger
 import com.silversky.skywatch.manager.ConnectionManager
 import com.silversky.skywatch.media.createSmbPlayer
 import com.silversky.skywatch.media.getSubtitleCacheDir
-import com.silversky.skywatch.media.prepareSmbMediaSource
+import androidx.media3.common.Tracks
+import com.silversky.skywatch.media.prepareSmbMediaItem
 import com.silversky.skywatch.persistence.PlaybackState
 import com.silversky.skywatch.persistence.PlaybackStateStore
 import com.silversky.skywatch.subtitle.SubtitleServerManager
@@ -47,7 +48,11 @@ constructor(
     private val logger: Logger,
 ) : ViewModel() {
 
-  val player: ExoPlayer = createSmbPlayer(context)
+  val player: ExoPlayer = createSmbPlayer(
+      context,
+      connectionManager.smbClient!!,
+      logger,
+  )
 
   var loading by mutableStateOf(true)
     private set
@@ -151,8 +156,8 @@ constructor(
                 smbFile.path,
             )
 
-        val mediaSource =
-            prepareSmbMediaSource(
+        val mediaItem =
+            prepareSmbMediaItem(
                 context = context,
                 smbClient = client,
                 shareName = share,
@@ -160,7 +165,7 @@ constructor(
                 logger = logger,
             )
 
-        player.setMediaSource(mediaSource)
+        player.setMediaItem(mediaItem)
         player.prepare()
 
         val savedPosition = savedState?.position
@@ -286,13 +291,11 @@ constructor(
   fun downloadAndLoadSubtitle(subtitleId: String, subtitleName: String) {
     val share = shareName ?: return
     val smbFile = file ?: return
-    val client = client ?: return
 
     viewModelScope.launch {
       try {
         val bytes = subtitleServerManager.downloadSubtitle(subtitleId)
-        loadExternalSubtitle(bytes, subtitleName, client, share, smbFile)
-        showSubtitleMenu = false
+        loadExternalSubtitle(bytes, subtitleName, share, smbFile)
       } catch (e: Exception) {
         logger.error("Error during subtitle download or processing", e)
       }
@@ -302,11 +305,9 @@ constructor(
   private suspend fun loadExternalSubtitle(
       bytes: ByteArray,
       name: String,
-      client: com.silversky.core.client.SmbClient,
       share: String,
       smbFile: com.silversky.core.smb.SmbEntry,
   ) {
-    val currentPosition = player.currentPosition
     val wasPlaying = player.isPlaying
 
     val videoUri = buildSmbUri(shareName = share, path = smbFile.path)
@@ -323,38 +324,50 @@ constructor(
       return
     }
 
-    val mediaSource =
-        prepareSmbMediaSource(
-            context = context,
-            smbClient = client,
-            shareName = share,
-            path = smbFile.path,
-            logger = logger,
-        )
+    val currentMediaItem = player.currentMediaItem ?: return
+    val label = "[Cached] $name"
 
-    player.setMediaSource(mediaSource, currentPosition)
+    val newSubtitleConfig =
+        androidx.media3.common.MediaItem.SubtitleConfiguration.Builder(
+                android.net.Uri.fromFile(subtitleFile)
+            )
+            .setMimeType("application/x-subrip")
+            .setLabel(label)
+            .setId(label)
+            .build()
+
+    val currentConfigs = currentMediaItem.localConfiguration?.subtitleConfigurations ?: emptyList()
+    val newConfigs = currentConfigs.filter { it.id != label }.toMutableList()
+    newConfigs.add(newSubtitleConfig)
+
+    val newMediaItem = currentMediaItem.buildUpon().setSubtitleConfigurations(newConfigs).build()
+
+    player.setMediaItem(newMediaItem, false)
     player.prepare()
 
-    viewModelScope.launch {
-      val label = "[Cached] $name"
-      var selection: com.silversky.skywatch.ui.TrackSelection? = null
-      for (i in 0 until 10) {
-        selection = findTrack(player, C.TRACK_TYPE_TEXT, label)
-        if (selection != null) break
-        delay(100.milliseconds)
-      }
+    player.addListener(
+        object : Player.Listener {
+          override fun onTracksChanged(tracks: Tracks) {
+            val selection = findTrack(player, C.TRACK_TYPE_TEXT, label)
+            if (selection != null) {
+              player.trackSelectionParameters =
+                  player.trackSelectionParameters
+                      .buildUpon()
+                      .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                      .setOverrideForType(
+                          TrackSelectionOverride(selection.group, listOf(selection.index))
+                      )
+                      .build()
+              showSubtitleMenu = false
+              player.removeListener(this)
+            }
+          }
 
-      if (selection != null) {
-        player.trackSelectionParameters =
-            player.trackSelectionParameters
-                .buildUpon()
-                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-                .setOverrideForType(
-                    TrackSelectionOverride(selection.group, listOf(selection.index))
-                )
-                .build()
-      }
-    }
+          override fun onPlayerError(error: PlaybackException) {
+            player.removeListener(this)
+          }
+        }
+    )
 
     if (wasPlaying) {
       player.play()
