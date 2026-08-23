@@ -8,13 +8,12 @@ data class SubtitleCue(
 
 object SubtitleParser {
   private val TIME_PATTERN =
-      Regex(
-          """(\d{1,2}):(\d{1,2}):(\d{1,2})[.,](\d{1,3})\s*-->\s*(\d{1,2}):(\d{1,2}):(\d{1,2})[.,](\d{1,3})"""
-      )
+      Regex("""\s*(\d+):(\d+):(\d+)(?:[.,](\d+))?\s*-->\s*(\d+):(\d+):(\d+)(?:[.,](\d+))?.*""")
 
   fun parseSrt(content: String): List<SubtitleCue> {
     val cues = mutableListOf<SubtitleCue>()
     val normalized = content.replace("\r\n", "\n").replace("\r", "\n")
+    // Split by at least two newlines to separate blocks, but allow more
     val blocks = normalized.split(Regex("\\n\\s*\\n"))
 
     for (block in blocks) {
@@ -45,12 +44,19 @@ object SubtitleParser {
       val textLines = lines.drop(timeLineIndex + 1)
       if (textLines.isEmpty()) continue
 
-      cues +=
-          SubtitleCue(
-              startTime = startTime,
-              endTime = endTime,
-              text = textLines.joinToString("\n").replace(Regex("<[^>]*>"), ""),
-          )
+      var text = textLines.joinToString("\n")
+
+      // Strip HTML tags
+      text = text.replace(Regex("<[^>]*>"), "")
+
+      if (text.isNotBlank()) {
+        cues +=
+            SubtitleCue(
+                startTime = startTime,
+                endTime = endTime,
+                text = text,
+            )
+      }
     }
 
     return cues
@@ -60,15 +66,18 @@ object SubtitleParser {
       h: String,
       m: String,
       s: String,
-      ms: String,
+      ms: String?,
   ): Long {
-    // Pad milliseconds to 3 digits if necessary
-    val msLong =
-        when (ms.length) {
-          1 -> ms.toLong() * 100
-          2 -> ms.toLong() * 10
-          else -> ms.toLong()
-        }
+    var msLong = 0L
+    if (!ms.isNullOrEmpty()) {
+      msLong =
+          when {
+            ms.length >= 3 -> ms.take(3).toLong()
+            ms.length == 2 -> ms.toLong() * 10
+            ms.length == 1 -> ms.toLong() * 100
+            else -> 0L
+          }
+    }
     return (h.toLong() * 3_600_000 + m.toLong() * 60_000 + s.toLong() * 1_000 + msLong)
   }
 }

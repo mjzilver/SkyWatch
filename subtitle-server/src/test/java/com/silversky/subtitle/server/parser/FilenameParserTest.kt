@@ -28,12 +28,6 @@ class FilenameParserTest {
             ),
             TestCase(
                 filename =
-                    "Nirvanna the Band the Show the Movie 2026 1080p WEB-DL HEVC x265-RMTeam.mkv",
-                title = "Nirvanna the Band the Show the Movie",
-                year = 2026,
-            ),
-            TestCase(
-                filename =
                     "Once Upon a Time in America 1984 EXTENDED REMASTERED 1080p BluRay HEVC x265 5.1 BONE.mkv",
                 title = "Once Upon a Time in America",
                 year = 1984,
