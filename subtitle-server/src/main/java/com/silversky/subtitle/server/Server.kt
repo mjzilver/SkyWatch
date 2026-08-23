@@ -5,6 +5,7 @@ import com.silversky.subtitle.server.parser.FilenameParser
 import com.silversky.subtitle.server.parser.TokenClassifier
 import com.silversky.subtitle.server.repository.SubtitleRepository
 import com.silversky.subtitle.server.routes.SubtitleRoutes
+import com.silversky.subtitle.server.service.CacheCleaner
 import com.silversky.subtitle.server.service.MdnsService
 import com.silversky.subtitle.server.service.SubtitleService
 import io.ktor.serialization.kotlinx.json.json
@@ -12,11 +13,17 @@ import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 fun main() {
+  val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
   val config = ConfigLoader.load()
   val repository = SubtitleRepository()
   val filenameParser = FilenameParser(TokenClassifier())
+  val cacheCleaner = CacheCleaner(repository, applicationScope)
 
   val subtitleService =
       SubtitleService(
@@ -34,6 +41,7 @@ fun main() {
       )
 
   mdns.start()
+  cacheCleaner.start()
 
   embeddedServer(
           factory = Netty,

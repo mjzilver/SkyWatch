@@ -215,20 +215,39 @@ class SubtitleRepository(
         )
       }
 
-  // TODO: remove subtitles after not accessed for a long time (maybe a month?)
+  fun getAllSubtitles(): List<CachedSubtitle> =
+      transaction(database) {
+        Subtitles.selectAll().map {
+          CachedSubtitle(
+              id = it[Subtitles.id],
+              name = it[Subtitles.name],
+              filePath = it[Subtitles.filePath],
+              lastUsed = kotlin.time.Instant.fromEpochMilliseconds(it[Subtitles.lastUsed]),
+          )
+        }
+      }
+
   fun deleteSubtitle(id: String) {
     transaction(database) {
       val row =
-          Subtitles.selectAll()
-              .where {
-                Subtitles.id eq id
-              }
-              .singleOrNull() ?: return@transaction
+          Subtitles.selectAll().where { Subtitles.id eq id }.singleOrNull() ?: return@transaction
 
-      File(row[Subtitles.filePath]).delete()
+      val path = row[Subtitles.filePath]
+      try {
+        val file = File(path)
+        if (file.exists()) {
+          file.delete()
+        }
+      } catch (e: Exception) {
+        println("Failed delete subtitle at $path: ${e.message}")
+      }
 
-      Subtitles.deleteWhere {
-        Subtitles.id eq id
+      Subtitles.deleteWhere { Subtitles.id eq id }
+
+      val mediaId = row[Subtitles.mediaId]
+      val remainingCount = Subtitles.selectAll().where { Subtitles.mediaId eq mediaId }.count()
+      if (remainingCount == 0L) {
+        Media.deleteWhere { Media.id eq mediaId }
       }
     }
   }
