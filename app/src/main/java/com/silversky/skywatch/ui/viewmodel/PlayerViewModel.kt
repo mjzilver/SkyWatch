@@ -12,7 +12,6 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.text.Cue
-import androidx.media3.common.text.CueGroup
 import androidx.media3.exoplayer.ExoPlayer
 import com.silversky.core.logger.Logger
 import com.silversky.skywatch.data.local.PlaybackState
@@ -350,7 +349,7 @@ constructor(
       try {
         val bytes = subtitleRepository.downloadSubtitle(subtitleId)
         val content = String(bytes, Charsets.UTF_8)
-        externalSubtitles = SubtitleParser.parseSrt(content)
+        externalSubtitles = SubtitleParser.parseSrt(content, logger)
         externalSubtitleName = subtitleName
 
         // Cache the subtitle
@@ -372,7 +371,7 @@ constructor(
   }
 
   fun loadCachedSubtitle(subtitleName: String, content: String) {
-    externalSubtitles = SubtitleParser.parseSrt(content)
+    externalSubtitles = SubtitleParser.parseSrt(content, logger)
     externalSubtitleName = subtitleName
     player.trackSelectionParameters =
         player.trackSelectionParameters

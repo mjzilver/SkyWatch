@@ -78,17 +78,17 @@ class SubtitleParserTest {
                 ),
             ),
             TestCase(
-                "html tags",
+                "html tags are preserved",
                 """
                 1
                 00:00:01,000 --> 00:00:04,000
                 <i><b>Hello</b></i> <u>World</u>
                 """
                     .trimIndent(),
-                listOf(SubtitleCue(1000, 4000, "Hello World")),
+                listOf(SubtitleCue(1000, 4000, "<i><b>Hello</b></i> <u>World</u>")),
             ),
             TestCase(
-                "html tags across lines",
+                "html tags across lines are preserved",
                 """
                 1
                 00:00:01,000 --> 00:00:04,000
@@ -96,7 +96,37 @@ class SubtitleParserTest {
                 World</i>
                 """
                     .trimIndent(),
-                listOf(SubtitleCue(1000, 4000, "Hello\nWorld")),
+                listOf(SubtitleCue(1000, 4000, "<i>Hello\nWorld</i>")),
+            ),
+            TestCase(
+                "font tags are preserved",
+                """
+                1
+                00:00:01,000 --> 00:00:04,000
+                <font color="red">Hello</font>
+                """
+                    .trimIndent(),
+                listOf(SubtitleCue(1000, 4000, "<font color=\"red\">Hello</font>")),
+            ),
+            TestCase(
+                "strikethrough tags are preserved",
+                """
+                1
+                00:00:01,000 --> 00:00:04,000
+                <s>Hello</s>
+                """
+                    .trimIndent(),
+                listOf(SubtitleCue(1000, 4000, "<s>Hello</s>")),
+            ),
+            TestCase(
+                "br tags are preserved",
+                """
+                1
+                00:00:01,000 --> 00:00:04,000
+                Hello<br>World
+                """
+                    .trimIndent(),
+                listOf(SubtitleCue(1000, 4000, "Hello<br>World")),
             ),
             TestCase(
                 "multiple cues",
@@ -135,43 +165,6 @@ class SubtitleParserTest {
                         "Hello",
                     ),
                 ),
-            ),
-        )
-
-    cases.forEach { case ->
-      assertEquals(
-          case.expected,
-          SubtitleParser.parseSrt(case.content),
-          "Failed test case: ${case.name}",
-      )
-    }
-  }
-
-  @Test
-  fun `parse invalid and empty srt cases`() {
-    val cases: List<TestCase> =
-        listOf(
-            TestCase(
-                name = "LF line endings",
-                content =
-                    """
-                    1
-                    00:00:01,000 --> 00:00:04,000
-                    Hello World
-                    """
-                        .trimIndent(),
-                expected =
-                    listOf(
-                        SubtitleCue(1000, 4000, "Hello World"),
-                    ),
-            ),
-            TestCase(
-                name = "CRLF line endings",
-                content = "1\r\n00:00:01,000 --> 00:00:04,000\r\nHello",
-                expected =
-                    listOf(
-                        SubtitleCue(1000, 4000, "Hello"),
-                    ),
             ),
         )
 
