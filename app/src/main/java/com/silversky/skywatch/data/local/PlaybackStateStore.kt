@@ -16,6 +16,8 @@ data class PlaybackState(
     val duration: Long,
     val audioTrack: String? = null,
     val subtitleTrack: String? = null,
+    val completed: Boolean = false,
+    val subtitleOffset: Long = 0L,
 )
 
 class PlaybackStateStore(private val context: Context) {

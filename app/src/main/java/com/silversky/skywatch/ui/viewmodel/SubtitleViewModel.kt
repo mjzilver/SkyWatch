@@ -7,6 +7,8 @@ import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.exoplayer.ExoPlayer
+import com.silversky.skywatch.data.local.CachedSubtitle
+import com.silversky.skywatch.data.local.SubtitleStore
 import com.silversky.skywatch.data.repository.SubtitleRepository
 import com.silversky.skywatch.model.SubtitleResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,6 +20,7 @@ import kotlinx.coroutines.launch
 
 data class SubtitleUiState(
     val localTracks: List<Tracks.Group> = emptyList(),
+    val cachedSubtitles: List<CachedSubtitle> = emptyList(),
     val onlineSubtitles: List<SubtitleResult>? = null,
     val isSearching: Boolean = false,
     val searchRequested: Boolean = false,
@@ -25,8 +28,12 @@ data class SubtitleUiState(
 )
 
 @HiltViewModel
-class SubtitleViewModel @Inject constructor(private val subtitleRepository: SubtitleRepository) :
-    ViewModel() {
+class SubtitleViewModel
+@Inject
+constructor(
+    private val subtitleRepository: SubtitleRepository,
+    private val subtitleStore: SubtitleStore,
+) : ViewModel() {
 
   private val _uiState = MutableStateFlow(SubtitleUiState())
   val uiState: StateFlow<SubtitleUiState> = _uiState.asStateFlow()
@@ -59,7 +66,12 @@ class SubtitleViewModel @Inject constructor(private val subtitleRepository: Subt
   fun updateLocalTracks() {
     val p = player ?: return
     val tracks = p.currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
-    _uiState.value = _uiState.value.copy(localTracks = tracks)
+    val cached = subtitleStore.getCachedSubtitles(filename)
+    _uiState.value =
+        _uiState.value.copy(
+            localTracks = tracks,
+            cachedSubtitles = cached,
+        )
   }
 
   fun searchOnline() {

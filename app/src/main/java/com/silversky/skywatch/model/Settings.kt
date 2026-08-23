@@ -21,4 +21,6 @@ data class Settings(
     val sortBy: SortBy = SortBy.Name,
     val sortOrder: SortOrder = SortOrder.Ascending,
     val foldersFirst: Boolean = false,
+    val subtitleFontSize: Int = 24,
+    val subtitleFontFamily: String = "Sans Serif",
 )

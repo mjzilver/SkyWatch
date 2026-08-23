@@ -118,6 +118,52 @@ fun SettingsScreen(
     }
 
     item {
+      Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(
+            text = "Subtitle Appearance",
+            style = MaterialTheme.typography.titleLarge,
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          Text(text = "Font size", style = MaterialTheme.typography.labelLarge)
+          Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            listOf(18, 24, 32, 48).forEach { size ->
+              Button(
+                  onClick = { viewModel.updateSubtitleFontSize(size) },
+                  modifier = Modifier.width(100.dp),
+              ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  RadioButton(selected = settings.subtitleFontSize == size, onClick = null)
+                  Spacer(modifier = Modifier.width(8.dp))
+                  Text(text = "$size")
+                }
+              }
+            }
+          }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          Text(text = "Font family", style = MaterialTheme.typography.labelLarge)
+          Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            listOf("Sans Serif", "Serif", "Monospace").forEach { family ->
+              Button(
+                  onClick = { viewModel.updateSubtitleFontFamily(family) },
+                  modifier = Modifier.width(160.dp),
+              ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  RadioButton(selected = settings.subtitleFontFamily == family, onClick = null)
+                  Spacer(modifier = Modifier.width(8.dp))
+                  Text(text = family)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Subtitle server override - This should always be the last setting
+    item {
       Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = "Subtitle server override",

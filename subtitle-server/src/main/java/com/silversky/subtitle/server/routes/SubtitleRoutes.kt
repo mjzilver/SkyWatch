@@ -79,6 +79,7 @@ object SubtitleRoutes {
       }
 
       get("/api/health") {
+        println("Subtitle server is healthy")
         call.respond("Ok")
       }
     }

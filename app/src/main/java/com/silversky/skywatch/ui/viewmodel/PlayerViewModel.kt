@@ -11,30 +11,30 @@ import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
-import androidx.media3.common.Tracks
+import androidx.media3.common.text.Cue
+import androidx.media3.common.text.CueGroup
 import androidx.media3.exoplayer.ExoPlayer
 import com.silversky.core.logger.Logger
 import com.silversky.skywatch.data.local.PlaybackState
 import com.silversky.skywatch.data.local.PlaybackStateStore
+import com.silversky.skywatch.data.local.SubtitleStore
 import com.silversky.skywatch.data.remote.SmbConnectionManager
+import com.silversky.skywatch.data.repository.SettingsRepository
 import com.silversky.skywatch.data.repository.SubtitleRepository
+import com.silversky.skywatch.player.SubtitleCue
+import com.silversky.skywatch.player.SubtitleParser
 import com.silversky.skywatch.player.createSmbPlayer
-import com.silversky.skywatch.player.getSubtitleCacheDir
 import com.silversky.skywatch.player.prepareSmbMediaItem
 import com.silversky.skywatch.ui.component.findTrack
 import com.silversky.skywatch.ui.component.getSelectedSubtitleTrackId
 import com.silversky.skywatch.ui.component.getSelectedTrackId
-import com.silversky.skywatch.utils.buildSmbUri
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.File
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @HiltViewModel
@@ -45,6 +45,8 @@ constructor(
     private val connectionManager: SmbConnectionManager,
     val playbackStateStore: PlaybackStateStore,
     val subtitleRepository: SubtitleRepository,
+    val subtitleStorage: SubtitleStore,
+    val settingsRepository: SettingsRepository,
     private val logger: Logger,
 ) : ViewModel() {
 
@@ -69,6 +71,8 @@ constructor(
 
   var showSpeedMenu by mutableStateOf(false)
 
+  var onPlaybackEnded: (() -> Unit)? = null
+
   var position by mutableLongStateOf(0L)
     private set
 
@@ -76,6 +80,18 @@ constructor(
     private set
 
   var isPlaying by mutableStateOf(false)
+    private set
+
+  var subtitleOffset by mutableLongStateOf(0L)
+    private set
+
+  var externalSubtitles by mutableStateOf<List<SubtitleCue>?>(null)
+    private set
+
+  var externalSubtitleName by mutableStateOf<String?>(null)
+    private set
+
+  var internalCues by mutableStateOf<List<Cue>>(emptyList())
     private set
 
   private var savedState: PlaybackState? = null
@@ -106,7 +122,11 @@ constructor(
                                 Player.STATE_IDLE -> "IDLE"
                                 Player.STATE_BUFFERING -> "BUFFERING"
                                 Player.STATE_READY -> "READY"
-                                Player.STATE_ENDED -> "ENDED"
+                                Player.STATE_ENDED -> {
+                                    savePlaybackState(isFinished = true)
+                                    onPlaybackEnded?.invoke()
+                                    "ENDED"
+                                }
                                 else -> "UNKNOWN"
                             }
                         }"
@@ -115,6 +135,10 @@ constructor(
 
           override fun onIsPlayingChanged(isPlaying: Boolean) {
             this@PlayerViewModel.isPlaying = isPlaying
+          }
+
+          override fun onCues(cueGroup: androidx.media3.common.text.CueGroup) {
+            internalCues = cueGroup.cues
           }
 
           override fun onPlayerError(playbackException: PlaybackException) {
@@ -161,6 +185,8 @@ constructor(
                 smbFile.path,
             )
 
+        subtitleOffset = savedState?.subtitleOffset ?: 0L
+
         val mediaItem =
             prepareSmbMediaItem(
                 context = context,
@@ -193,6 +219,7 @@ constructor(
 
   private fun applySavedTracks() {
     val state = savedState ?: return
+    val smbFile = file ?: return
     viewModelScope.launch {
       while (player.currentTracks.groups.isEmpty() && isActive) {
         delay(100L.milliseconds)
@@ -220,15 +247,22 @@ constructor(
                   .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
                   .build()
         } else {
-          findTrack(player, C.TRACK_TYPE_TEXT, id)?.let { selection ->
-            player.trackSelectionParameters =
-                player.trackSelectionParameters
-                    .buildUpon()
-                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-                    .setOverrideForType(
-                        TrackSelectionOverride(selection.group, listOf(selection.index))
-                    )
-                    .build()
+          // Check if it's a cached subtitle
+          val cached = subtitleStorage.getCachedSubtitles(smbFile.name)
+          val cachedMatch = cached.find { it.name == id }
+          if (cachedMatch != null) {
+            loadCachedSubtitle(cachedMatch.name, cachedMatch.content)
+          } else {
+            findTrack(player, C.TRACK_TYPE_TEXT, id)?.let { selection ->
+              player.trackSelectionParameters =
+                  player.trackSelectionParameters
+                      .buildUpon()
+                      .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                      .setOverrideForType(
+                          TrackSelectionOverride(selection.group, listOf(selection.index))
+                      )
+                      .build()
+            }
           }
         }
       }
@@ -256,22 +290,41 @@ constructor(
     }
   }
 
-  fun savePlaybackState() {
+  fun savePlaybackState(isFinished: Boolean = false) {
     val client = client ?: return
     val share = shareName ?: return
     val smbFile = file ?: return
 
     viewModelScope.launch {
+      val currentPos = player.currentPosition.coerceAtLeast(0L)
+      val totalDuration = player.duration.takeIf { it > 0L } ?: 0L
+
+      val percent = if (totalDuration > 0) currentPos.toDouble() / totalDuration else 0.0
+
+      val isCompleted = isFinished || percent >= 0.90
+      val shouldReset = isFinished || percent > 0.99
+
+      val finalPosition = if (shouldReset) 0L else currentPos
+
+      val subTrack =
+          if (externalSubtitleName != null) {
+            externalSubtitleName
+          } else {
+            getSelectedSubtitleTrackId(player)
+          }
+
       playbackStateStore.save(
           ip = client.server!!.ipAddress,
           share = share,
           path = smbFile.path,
           state =
               PlaybackState(
-                  position = player.currentPosition.coerceAtLeast(0L),
-                  duration = player.duration.takeIf { it > 0L } ?: 0L,
+                  position = finalPosition,
+                  duration = totalDuration,
                   audioTrack = getSelectedTrackId(player, C.TRACK_TYPE_AUDIO),
-                  subtitleTrack = getSelectedSubtitleTrackId(player),
+                  subtitleTrack = subTrack,
+                  completed = isCompleted,
+                  subtitleOffset = subtitleOffset,
               ),
       )
     }
@@ -293,89 +346,48 @@ constructor(
   }
 
   fun downloadAndLoadSubtitle(subtitleId: String, subtitleName: String) {
-    val share = shareName ?: return
-    val smbFile = file ?: return
-
     viewModelScope.launch {
       try {
         val bytes = subtitleRepository.downloadSubtitle(subtitleId)
-        loadExternalSubtitle(bytes, subtitleName, share, smbFile)
+        val content = String(bytes, Charsets.UTF_8)
+        externalSubtitles = SubtitleParser.parseSrt(content)
+        externalSubtitleName = subtitleName
+
+        // Cache the subtitle
+        file?.let {
+          subtitleStorage.saveSubtitle(it.name, subtitleName, content)
+        }
+
+        // Disable internal subtitles when external ones are loaded
+        player.trackSelectionParameters =
+            player.trackSelectionParameters
+                .buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                .build()
+        showSubtitleMenu = false
       } catch (e: Exception) {
         logger.error("Error during subtitle download or processing", e)
       }
     }
   }
 
-  private suspend fun loadExternalSubtitle(
-      bytes: ByteArray,
-      name: String,
-      share: String,
-      smbFile: com.silversky.core.smb.SmbEntry,
-  ) {
-    val wasPlaying = player.isPlaying
-
-    val videoUri = buildSmbUri(shareName = share, path = smbFile.path)
-    val cacheDir = getSubtitleCacheDir(context = context, videoUri = videoUri)
-    val subtitleFile = File(cacheDir, name)
-
-    try {
-      withContext(Dispatchers.IO) {
-        subtitleFile.parentFile?.mkdirs()
-        subtitleFile.writeBytes(bytes)
-      }
-    } catch (e: Exception) {
-      logger.error("Failed to save subtitle", e)
-      return
-    }
-
-    val currentMediaItem = player.currentMediaItem ?: return
-    val label = "[Cached] $name"
-
-    val newSubtitleConfig =
-        androidx.media3.common.MediaItem.SubtitleConfiguration.Builder(
-                android.net.Uri.fromFile(subtitleFile)
-            )
-            .setMimeType("application/x-subrip")
-            .setLabel(label)
-            .setId(label)
+  fun loadCachedSubtitle(subtitleName: String, content: String) {
+    externalSubtitles = SubtitleParser.parseSrt(content)
+    externalSubtitleName = subtitleName
+    player.trackSelectionParameters =
+        player.trackSelectionParameters
+            .buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
             .build()
+  }
 
-    val currentConfigs = currentMediaItem.localConfiguration?.subtitleConfigurations ?: emptyList()
-    val newConfigs = currentConfigs.filter { it.id != label }.toMutableList()
-    newConfigs.add(newSubtitleConfig)
+  fun updateSubtitleOffset(offset: Long) {
+    subtitleOffset = offset
+  }
 
-    val newMediaItem = currentMediaItem.buildUpon().setSubtitleConfigurations(newConfigs).build()
-
-    player.setMediaItem(newMediaItem, false)
-    player.prepare()
-
-    player.addListener(
-        object : Player.Listener {
-          override fun onTracksChanged(tracks: Tracks) {
-            val selection = findTrack(player, C.TRACK_TYPE_TEXT, label)
-            if (selection != null) {
-              player.trackSelectionParameters =
-                  player.trackSelectionParameters
-                      .buildUpon()
-                      .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-                      .setOverrideForType(
-                          TrackSelectionOverride(selection.group, listOf(selection.index))
-                      )
-                      .build()
-              showSubtitleMenu = false
-              player.removeListener(this)
-            }
-          }
-
-          override fun onPlayerError(error: PlaybackException) {
-            player.removeListener(this)
-          }
-        }
-    )
-
-    if (wasPlaying) {
-      player.play()
-    }
+  fun clearExternalSubtitles() {
+    externalSubtitles = null
+    externalSubtitleName = null
   }
 
   fun back(onBack: () -> Unit) {

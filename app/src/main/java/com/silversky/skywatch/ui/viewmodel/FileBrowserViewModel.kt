@@ -152,6 +152,7 @@ constructor(
       onBack()
     } else {
       currentPath = parentPath(currentPath)
+      loadEntries()
     }
   }
 

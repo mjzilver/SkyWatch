@@ -189,9 +189,10 @@ internal fun PlayerControls(
 
         seekSpeed =
             when {
-              heldTime > 3_000L -> 60_000L
-              heldTime > 2_000L -> 40_000L
-              heldTime > 1_000L -> 20_000L
+              heldTime > 5_000L -> 300_000L
+              heldTime > 3_000L -> 120_000L
+              heldTime > 2_000L -> 60_000L
+              heldTime > 1_000L -> 30_000L
               else -> 10_000L
             }
       }
@@ -328,13 +329,6 @@ internal fun PlayerControls(
           verticalAlignment = Alignment.CenterVertically,
       ) {
         PlayerButton(
-            text = "-10",
-            onClick = {
-              player.seekBack()
-            },
-        )
-
-        PlayerButton(
             text =
                 if (isPlaying) {
                   "Pause"
@@ -348,13 +342,6 @@ internal fun PlayerControls(
         PlayerButton(
             text = "Stop",
             onClick = onStop,
-        )
-
-        PlayerButton(
-            text = "+10",
-            onClick = {
-              player.seekForward()
-            },
         )
 
         Spacer(modifier = Modifier.width(12.dp))

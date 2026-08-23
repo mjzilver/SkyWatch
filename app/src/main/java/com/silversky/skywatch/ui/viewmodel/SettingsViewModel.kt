@@ -105,6 +105,18 @@ constructor(
     }
   }
 
+  fun updateSubtitleFontSize(size: Int) {
+    viewModelScope.launch {
+      settingsRepository.updateSettings { it.copy(subtitleFontSize = size) }
+    }
+  }
+
+  fun updateSubtitleFontFamily(family: String) {
+    viewModelScope.launch {
+      settingsRepository.updateSettings { it.copy(subtitleFontFamily = family) }
+    }
+  }
+
   fun checkSubtitleServerAddress(address: String) {
     viewModelScope.launch {
       _connectionStatus.value = SubtitleServerConnectionStatus.Testing

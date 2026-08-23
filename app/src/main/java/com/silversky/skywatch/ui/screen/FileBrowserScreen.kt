@@ -97,8 +97,8 @@ fun FileBrowserScreen(
 
             val hasFinished =
                 progress != null &&
-                    progress.duration > 0 &&
-                    progress.position >= progress.duration * 0.90
+                    (progress.completed ||
+                        (progress.duration > 0 && progress.position >= progress.duration * 0.90))
 
             val hasResumePosition = progress != null && !hasFinished
 

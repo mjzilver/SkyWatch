@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -18,8 +19,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.PlayerView
 import androidx.tv.material3.Text
 import com.silversky.skywatch.ui.component.AudioTrackDialog
@@ -27,10 +28,7 @@ import com.silversky.skywatch.ui.component.PlaybackErrorOverlay
 import com.silversky.skywatch.ui.component.PlayerControls
 import com.silversky.skywatch.ui.component.SpeedDialog
 import com.silversky.skywatch.ui.component.SubtitleDialog
-import com.silversky.skywatch.ui.theme.SubtitleBackground
-import com.silversky.skywatch.ui.theme.SubtitleOutline
-import com.silversky.skywatch.ui.theme.SubtitleText
-import com.silversky.skywatch.ui.theme.SubtitleWindow
+import com.silversky.skywatch.ui.component.SubtitleOverlay
 import com.silversky.skywatch.ui.viewmodel.PlayerViewModel
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
@@ -49,6 +47,9 @@ fun PlayerScreen(
   val duration = viewModel.duration
   val isPlaying = viewModel.isPlaying
   val file = viewModel.file ?: return
+  val externalSubtitles = viewModel.externalSubtitles
+  val subtitleOffset = viewModel.subtitleOffset
+  val settings by viewModel.settingsRepository.settings.collectAsStateWithLifecycle()
 
   LaunchedEffect(
       viewModel.controlsVisible,
@@ -64,6 +65,12 @@ fun PlayerScreen(
     ) {
       delay(5_000L.milliseconds)
       viewModel.controlsVisible = false
+    }
+  }
+
+  LaunchedEffect(Unit) {
+    viewModel.onPlaybackEnded = {
+      viewModel.back(onBack)
     }
   }
 
@@ -149,16 +156,11 @@ fun PlayerScreen(
             isFocusableInTouchMode = true
 
             subtitleView?.apply {
-              setStyle(
-                  CaptionStyleCompat(
-                      SubtitleText,
-                      SubtitleBackground,
-                      SubtitleWindow,
-                      CaptionStyleCompat.EDGE_TYPE_OUTLINE,
-                      SubtitleOutline,
-                      null,
-                  )
-              )
+              // Disable internal subtitle rendering
+              setUserDefaultStyle()
+              setUserDefaultTextSize()
+              setFractionalTextSize(0f)
+              visibility = View.GONE
             }
           }
         },
@@ -188,6 +190,17 @@ fun PlayerScreen(
       PlaybackErrorOverlay(
           message = error,
           onClose = { viewModel.back(onBack) },
+      )
+    }
+
+    if (externalSubtitles != null || viewModel.internalCues.isNotEmpty()) {
+      SubtitleOverlay(
+          externalCues = externalSubtitles,
+          internalCues = viewModel.internalCues,
+          position = position,
+          offset = subtitleOffset,
+          fontSize = settings.subtitleFontSize,
+          fontFamily = settings.subtitleFontFamily,
       )
     }
 
@@ -231,8 +244,15 @@ fun PlayerScreen(
       SubtitleDialog(
           player = player,
           filename = file.name,
+          subtitleOffset = subtitleOffset,
+          externalSubtitleName = viewModel.externalSubtitleName,
+          onOffsetChange = { viewModel.updateSubtitleOffset(it) },
+          onClearExternalSubtitles = { viewModel.clearExternalSubtitles() },
           onDownloadSubtitle = { subtitle ->
             viewModel.downloadAndLoadSubtitle(subtitle.id, subtitle.name)
+          },
+          onSelectCachedSubtitle = { cached ->
+            viewModel.loadCachedSubtitle(cached.name, cached.content)
           },
           onDismiss = {
             viewModel.savePlaybackState()
