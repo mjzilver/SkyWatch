@@ -39,6 +39,7 @@ object SubtitleRoutes {
                   year = null,
                   season = null,
                   episode = null,
+                  edition = null,
                   subtitles = emptyList(),
               )
           )

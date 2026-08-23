@@ -138,6 +138,7 @@ constructor(
                       year = first.year,
                       season = first.season,
                       episode = first.episode,
+                      edition = first.edition,
                       subtitles = list.flatMap { it.subtitles }.distinctBy { it.id },
                   )
                 } else null

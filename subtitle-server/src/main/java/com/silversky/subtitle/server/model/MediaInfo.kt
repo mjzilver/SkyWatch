@@ -8,4 +8,5 @@ data class MediaInfo(
     val year: Int?,
     val season: Int?,
     val episode: Int?,
+    val edition: String?,
 )

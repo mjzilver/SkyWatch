@@ -6,6 +6,25 @@ class FilenameParser(
     private val classifier: TokenClassifier,
 ) {
 
+  private val editionKeywords =
+      listOf(
+          "extended",
+          "remastered",
+          "remaster",
+          "director",
+          "theatrical",
+          "unrated",
+          "uncut",
+          "criterion",
+          "special",
+          "collector",
+          "final",
+          "ultimate",
+          "anniversary",
+          "hybrid",
+          "imax",
+      )
+
   fun parse(filename: String): MediaInfo {
     val tokens =
         filename.split(".", " ", "_", "-").filter { it.isNotBlank() }.map(classifier::classify)
@@ -49,11 +68,21 @@ class FilenameParser(
       if (it < titleEndIndex) null else (tokens[it] as Token.Number).value
     }
 
+    val edition =
+        tokens
+            .filterIsInstance<Token.Text>()
+            .map { it.value.lowercase() }
+            .firstOrNull { text -> editionKeywords.any { keyword -> text.contains(keyword) } }
+            ?.let { found ->
+              editionKeywords.first { found.contains(it) }
+            }
+
     return MediaInfo(
         title = title,
         year = year,
         season = seasonEpisode?.season,
         episode = seasonEpisode?.episode,
+        edition = edition,
     )
   }
 }

@@ -6,6 +6,7 @@ data class CachedMedia(
     val year: Int?,
     val season: Int?,
     val episode: Int?,
+    val edition: String?,
     val subtitles: List<CachedSubtitle>,
 ) {
   override fun toString(): String =
@@ -15,6 +16,7 @@ data class CachedMedia(
           "year=$year, " +
           "season=$season, " +
           "episode=$episode, " +
+          "edition=$edition, " +
           "subtitles=${subtitles.size}" +
           ")"
 }
@@ -25,6 +27,7 @@ fun CachedMedia.toSearchResult(): SubtitleSearchResult =
         year = year,
         season = season,
         episode = episode,
+        edition = edition,
         subtitles =
             subtitles.map {
               SubtitleResult(

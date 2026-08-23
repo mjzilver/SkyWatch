@@ -8,6 +8,7 @@ data class SubtitleSearchResult(
     val year: Int?,
     val season: Int?,
     val episode: Int?,
+    val edition: String?,
     val subtitles: List<SubtitleResult>,
 )
 

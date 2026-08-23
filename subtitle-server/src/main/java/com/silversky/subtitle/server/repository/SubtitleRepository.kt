@@ -27,6 +27,7 @@ class SubtitleRepository(
     val year = integer("year").nullable()
     val season = integer("season").nullable()
     val episode = integer("episode").nullable()
+    val edition = varchar("edition", 255).nullable()
 
     override val primaryKey = PrimaryKey(id)
   }
@@ -71,7 +72,8 @@ class SubtitleRepository(
                   (Media.title eq media.title) and
                       (Media.year eq media.year) and
                       (Media.season eq media.season) and
-                      (Media.episode eq media.episode)
+                      (Media.episode eq media.episode) and
+                      (Media.edition eq media.edition)
                 }
                 .singleOrNull() ?: return@transaction null
 
@@ -97,6 +99,7 @@ class SubtitleRepository(
             year = mediaRow[Media.year],
             season = mediaRow[Media.season],
             episode = mediaRow[Media.episode],
+            edition = mediaRow[Media.edition],
             subtitles = subtitles,
         )
       }
@@ -109,7 +112,8 @@ class SubtitleRepository(
                 (Media.title eq media.title) and
                     (Media.year eq media.year) and
                     (Media.season eq media.season) and
-                    (Media.episode eq media.episode)
+                    (Media.episode eq media.episode) and
+                    (Media.edition eq media.edition)
               }
               .singleOrNull()
 
@@ -120,6 +124,7 @@ class SubtitleRepository(
           it[year] = media.year
           it[season] = media.season
           it[episode] = media.episode
+          it[edition] = media.edition
         }
       }
     }
@@ -148,7 +153,8 @@ class SubtitleRepository(
                 (Media.title eq media.title) and
                     (Media.year eq media.year) and
                     (Media.season eq media.season) and
-                    (Media.episode eq media.episode)
+                    (Media.episode eq media.episode) and
+                    (Media.edition eq media.edition)
               }
               .singleOrNull()
 
@@ -161,6 +167,7 @@ class SubtitleRepository(
                   it[year] = media.year
                   it[season] = media.season
                   it[episode] = media.episode
+                  it[edition] = media.edition
                 }
               }
 
@@ -208,6 +215,7 @@ class SubtitleRepository(
         )
       }
 
+  // TODO: remove subtitles after not accessed for a long time (maybe a month?)
   fun deleteSubtitle(id: String) {
     transaction(database) {
       val row =
