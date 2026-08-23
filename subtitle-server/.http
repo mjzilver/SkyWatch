@@ -1,8 +1,0 @@
-### Search subtitles
-GET http://localhost:8020/api/search?query=Breaking%20Bad%20S05E14
-Accept: application/json
-
-
-### Download subtitle
-GET http://localhost:8020/api/request/ba92e669-622e-4555-a92a-4e85d5686ba5
-Accept: application/octet-stream
