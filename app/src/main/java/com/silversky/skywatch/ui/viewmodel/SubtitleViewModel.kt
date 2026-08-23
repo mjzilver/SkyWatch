@@ -13,10 +13,12 @@ import com.silversky.skywatch.data.repository.SubtitleRepository
 import com.silversky.skywatch.model.SubtitleResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class SubtitleUiState(
     val localTracks: List<Tracks.Group> = emptyList(),
@@ -65,13 +67,18 @@ constructor(
 
   fun updateLocalTracks() {
     val p = player ?: return
-    val tracks = p.currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
-    val cached = subtitleStore.getCachedSubtitles(filename)
-    _uiState.value =
-        _uiState.value.copy(
-            localTracks = tracks,
-            cachedSubtitles = cached,
-        )
+    viewModelScope.launch {
+      val tracks = p.currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
+      val cached =
+          withContext(Dispatchers.IO) {
+            subtitleStore.getCachedSubtitles(filename)
+          }
+      _uiState.value =
+          _uiState.value.copy(
+              localTracks = tracks,
+              cachedSubtitles = cached,
+          )
+    }
   }
 
   fun searchOnline() {

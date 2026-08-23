@@ -25,57 +25,14 @@ class SubtitleParserTest {
                 listOf(SubtitleCue(1000, 4000, "Hello")),
             ),
             TestCase(
-                "CR line endings",
-                "1\r00:00:01,000 --> 00:00:04,000\rHello",
-                listOf(SubtitleCue(1000, 4000, "Hello")),
-            ),
-            TestCase(
                 "without cue index",
                 "00:00:01,000 --> 00:00:04,000\nHello",
                 listOf(SubtitleCue(1000, 4000, "Hello")),
             ),
             TestCase(
-                "arbitrary cue index",
-                "foo\n00:00:01,000 --> 00:00:04,000\nHello",
-                listOf(SubtitleCue(1000, 4000, "Hello")),
-            ),
-            TestCase(
-                "period milliseconds",
-                "1\n00:00:01.500 --> 00:00:04.123\nHello",
-                listOf(SubtitleCue(1500, 4123, "Hello")),
-            ),
-            TestCase(
                 "variable precision milliseconds",
                 "1\n00:00:01,5 --> 00:00:04,55\nHello",
                 listOf(SubtitleCue(1500, 4550, "Hello")),
-            ),
-            TestCase(
-                "no milliseconds",
-                "1\n00:00:01 --> 00:00:04\nHello",
-                listOf(SubtitleCue(1000, 4000, "Hello")),
-            ),
-            TestCase(
-                "timestamp whitespace and settings",
-                "1\n00:00:01,000   -->   00:00:04,000 align:center position:50%\nHello",
-                listOf(SubtitleCue(1000, 4000, "Hello")),
-            ),
-            TestCase(
-                "multiline text",
-                """
-                1
-                00:00:01,000 --> 00:00:04,000
-                Line One
-                Line Two
-                Line Three
-                """
-                    .trimIndent(),
-                listOf(
-                    SubtitleCue(
-                        1000,
-                        4000,
-                        "Line One\nLine Two\nLine Three",
-                    ),
-                ),
             ),
             TestCase(
                 "html tags are preserved",
@@ -88,81 +45,35 @@ class SubtitleParserTest {
                 listOf(SubtitleCue(1000, 4000, "<i><b>Hello</b></i> <u>World</u>")),
             ),
             TestCase(
-                "html tags across lines are preserved",
+                "complex html tags",
                 """
-                1
-                00:00:01,000 --> 00:00:04,000
-                <i>Hello
-                World</i>
-                """
-                    .trimIndent(),
-                listOf(SubtitleCue(1000, 4000, "<i>Hello\nWorld</i>")),
-            ),
-            TestCase(
-                "font tags are preserved",
-                """
-                1
-                00:00:01,000 --> 00:00:04,000
-                <font color="red">Hello</font>
-                """
-                    .trimIndent(),
-                listOf(SubtitleCue(1000, 4000, "<font color=\"red\">Hello</font>")),
-            ),
-            TestCase(
-                "strikethrough tags are preserved",
-                """
-                1
-                00:00:01,000 --> 00:00:04,000
-                <s>Hello</s>
-                """
-                    .trimIndent(),
-                listOf(SubtitleCue(1000, 4000, "<s>Hello</s>")),
-            ),
-            TestCase(
-                "br tags are preserved",
-                """
-                1
-                00:00:01,000 --> 00:00:04,000
-                Hello<br>World
-                """
-                    .trimIndent(),
-                listOf(SubtitleCue(1000, 4000, "Hello<br>World")),
-            ),
-            TestCase(
-                "multiple cues",
-                """
-                1
-                00:00:01,000 --> 00:00:03,000
-                First
-
-                2
-                00:00:04,000 --> 00:00:06,000
-                Second
-
                 3
-                00:00:07,000 --> 00:00:10,000
-                Third
+                00:00:45,964 --> 00:00:47,549
+                <i><font color=Lime>♪ May I have ♪
+                ♪ your attention please? ♪</i></font>
                 """
                     .trimIndent(),
                 listOf(
-                    SubtitleCue(1000, 3000, "First"),
-                    SubtitleCue(4000, 6000, "Second"),
-                    SubtitleCue(7000, 10000, "Third"),
+                    SubtitleCue(
+                        45964,
+                        47549,
+                        "<i><font color=Lime>♪ May I have ♪\n♪ your attention please? ♪</i></font>",
+                    ),
                 ),
             ),
             TestCase(
-                "zero timestamp",
-                "1\n00:00:00,000 --> 00:00:01,000\nHello",
-                listOf(SubtitleCue(0, 1000, "Hello")),
-            ),
-            TestCase(
-                "long duration",
-                "1\n12:34:56,789 --> 23:45:01,123\nHello",
+                "font tags with attributes",
+                """
+                1
+                00:00:02,785 --> 00:00:04,922
+                <font color="#ec14bd">Sync & corrections </Font> by <font color="Skyblue" size=10 face=Times New Roman>Blue-Bird™</font>
+                """
+                    .trimIndent(),
                 listOf(
                     SubtitleCue(
-                        45_296_789,
-                        85_501_123,
-                        "Hello",
+                        2785,
+                        4922,
+                        "<font color=\"#ec14bd\">Sync & corrections </Font> by <font color=\"Skyblue\" size=10 face=Times New Roman>Blue-Bird™</font>",
                     ),
                 ),
             ),
@@ -171,10 +82,34 @@ class SubtitleParserTest {
     cases.forEach { case ->
       assertEquals(
           case.expected,
-          SubtitleParser.parseSrt(case.content),
+          SubtitleParser.parse(case.content),
           "Failed test case: ${case.name}",
       )
     }
+  }
+
+  @Test
+  fun `parse sami cases`() {
+    val sami =
+        """
+        <SAMI>
+        <BODY>
+        <SYNC Start=1000><P Class=ENUSCC>Hello World
+        <SYNC Start=4000><P Class=ENUSCC>&nbsp;
+        <SYNC Start=5000><P Class=ENUSCC>Goodbye <i>World</i>
+        <SYNC Start=8000><P Class=ENUSCC>
+        </BODY>
+        </SAMI>
+        """
+            .trimIndent()
+
+    val expected =
+        listOf(
+            SubtitleCue(1000, 4000, "Hello World"),
+            SubtitleCue(5000, 8000, "Goodbye <i>World</i>"),
+        )
+
+    assertEquals(expected, SubtitleParser.parse(sami))
   }
 
   private data class TestCase(

@@ -31,9 +31,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @HiltViewModel
@@ -246,7 +248,6 @@ constructor(
                   .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
                   .build()
         } else {
-          // Check if it's a cached subtitle
           val cached = subtitleStorage.getCachedSubtitles(smbFile.name)
           val cachedMatch = cached.find { it.name == id }
           if (cachedMatch != null) {
@@ -349,15 +350,17 @@ constructor(
       try {
         val bytes = subtitleRepository.downloadSubtitle(subtitleId)
         val content = String(bytes, Charsets.UTF_8)
-        externalSubtitles = SubtitleParser.parseSrt(content, logger)
+        val parsed =
+            withContext(Dispatchers.Default) {
+              SubtitleParser.parse(content, logger)
+            }
+        externalSubtitles = parsed
         externalSubtitleName = subtitleName
 
-        // Cache the subtitle
         file?.let {
           subtitleStorage.saveSubtitle(it.name, subtitleName, content)
         }
 
-        // Disable internal subtitles when external ones are loaded
         player.trackSelectionParameters =
             player.trackSelectionParameters
                 .buildUpon()
@@ -371,13 +374,19 @@ constructor(
   }
 
   fun loadCachedSubtitle(subtitleName: String, content: String) {
-    externalSubtitles = SubtitleParser.parseSrt(content, logger)
-    externalSubtitleName = subtitleName
-    player.trackSelectionParameters =
-        player.trackSelectionParameters
-            .buildUpon()
-            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
-            .build()
+    viewModelScope.launch {
+      val parsed =
+          withContext(Dispatchers.Default) {
+            SubtitleParser.parse(content, logger)
+          }
+      externalSubtitles = parsed
+      externalSubtitleName = subtitleName
+      player.trackSelectionParameters =
+          player.trackSelectionParameters
+              .buildUpon()
+              .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+              .build()
+    }
   }
 
   fun updateSubtitleOffset(offset: Long) {

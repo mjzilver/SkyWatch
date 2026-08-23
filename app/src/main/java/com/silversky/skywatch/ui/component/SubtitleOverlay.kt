@@ -1,9 +1,11 @@
 package com.silversky.skywatch.ui.component
 
+import android.text.style.AbsoluteSizeSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
+import android.text.style.TypefaceSpan
 import android.text.style.UnderlineSpan
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.core.text.HtmlCompat
 import androidx.media3.common.text.Cue
@@ -116,12 +119,20 @@ private fun htmlToAnnotatedString(text: String): AnnotatedString {
             addStyle(SpanStyle(textDecoration = TextDecoration.LineThrough), start, end)
         is ForegroundColorSpan ->
             addStyle(SpanStyle(color = Color(span.foregroundColor)), start, end)
-        is RelativeSizeSpan ->
-            addStyle(
-                SpanStyle(fontSize = 1.sp * span.sizeChange),
-                start,
-                end,
-            ) // Basic relative size support
+        is RelativeSizeSpan -> addStyle(SpanStyle(fontSize = span.sizeChange.em), start, end)
+        is AbsoluteSizeSpan -> addStyle(SpanStyle(fontSize = span.size.sp), start, end)
+        is TypefaceSpan -> {
+          val family =
+              when (span.family) {
+                "serif" -> FontFamily.Serif
+                "monospace" -> FontFamily.Monospace
+                "sans-serif" -> FontFamily.SansSerif
+                else -> null
+              }
+          if (family != null) {
+            addStyle(SpanStyle(fontFamily = family), start, end)
+          }
+        }
       }
     }
   }
