@@ -21,6 +21,7 @@ import com.silversky.core.smb.SmbEntry
 import com.silversky.core.smb.SmbFile
 import com.silversky.core.smb.SmbFileImpl
 import com.silversky.core.smb.SmbServer
+import java.io.InterruptedIOException
 import java.util.EnumSet
 import java.util.concurrent.ExecutionException
 
@@ -165,14 +166,14 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
         if (isInterrupted(e)) {
           logger.debug("SMB OPEN CANCELLED: //$shareName/$path")
           Thread.currentThread().interrupt()
+          throw InterruptedIOException("SMB open cancelled")
         } else {
           logger.error(
               "SMB FILE OPEN FAILED: //$shareName/$path",
               e,
           )
+          throw e
         }
-
-        throw e
       }
     }
   }
@@ -217,7 +218,7 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
       } catch (e: Exception) {
         if (isInterrupted(e)) {
           Thread.currentThread().interrupt()
-          throw e
+          throw InterruptedIOException("SMB operation interrupted")
         }
 
         lastException = e
@@ -246,7 +247,7 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
         } catch (e: Exception) {
           if (isInterrupted(e)) {
             Thread.currentThread().interrupt()
-            throw e
+            throw InterruptedIOException("SMB reconnect interrupted")
           }
 
           lastException = e
@@ -344,6 +345,7 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
 
       if (isInterrupted(e)) {
         Thread.currentThread().interrupt()
+        throw InterruptedIOException("SMB connect interrupted")
       }
 
       logger.error(

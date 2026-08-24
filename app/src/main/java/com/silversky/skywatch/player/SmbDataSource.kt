@@ -8,6 +8,8 @@ import androidx.media3.datasource.DataSpec
 import com.silversky.core.client.SmbClient
 import com.silversky.core.logger.Logger
 import com.silversky.core.smb.SmbFile
+import java.io.IOException
+import java.io.InterruptedIOException
 
 @UnstableApi
 class SmbDataSource(
@@ -46,11 +48,22 @@ class SmbDataSource(
         dataSpec.uri.path?.trimStart('/')?.replace('/', '\\')
             ?: throw IllegalArgumentException("SMB URI has no path")
 
-    file =
-        smbClient.openFile(
-            shareName = shareName!!,
-            path = path!!,
-        ) ?: throw IllegalStateException("File does not exist: $shareName/$path")
+    try {
+      file =
+          smbClient.openFile(
+              shareName = shareName!!,
+              path = path!!,
+          ) ?: throw IOException("File does not exist: $shareName/$path")
+    } catch (e: Exception) {
+      if (isInterrupted(e)) {
+        logger.debug("SMB OPEN CANCELLED: //$shareName/$path")
+        Thread.currentThread().interrupt()
+        throw InterruptedIOException("SMB open cancelled")
+      }
+
+      if (e is IOException) throw e
+      throw IOException("Failed to open SMB file: //$shareName/$path", e)
+    }
 
     position = dataSpec.position
 

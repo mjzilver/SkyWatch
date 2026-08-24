@@ -52,7 +52,6 @@ dependencies {
   implementation(libs.androidx.media3.ui)
   implementation(libs.androidx.compose.material3)
   implementation(libs.androidx.datastore.preferences)
-  debugImplementation(libs.leakcanary)
   implementation(libs.hilt.android)
   ksp(libs.hilt.compiler)
   implementation(libs.hilt.navigation.compose)
