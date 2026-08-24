@@ -3,13 +3,13 @@ package com.silversky.skywatch.player
 import com.silversky.core.logger.Logger
 
 object SrtParser : SubtitleFormatParser {
-  private val TIMESTAMP_REGEX =
-      Regex("""^\s*\d+:\d+:\d+(?:[,.]\d+)?\s*-->\s*\d+:\d+:\d+(?:[,.]\d+)?(?:\s+.*)?$""")
-
   override fun canParse(content: String): Boolean {
-    if (content.isBlank()) return false
-
-    return content.lineSequence().take(20).any { TIMESTAMP_REGEX.matches(it) }
+    return content
+        .lineSequence()
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .take(20)
+        .any { parseTimestampLine(it) != null }
   }
 
   override fun parse(content: String, logger: Logger?): List<SubtitleCue> {
@@ -26,7 +26,7 @@ object SrtParser : SubtitleFormatParser {
       }
 
       if (line.contains(" --> ")) {
-        val timestamps = parseTimestampLine(line, logger)
+        val timestamps = parseTimestampLine(line)
         if (timestamps != null) {
           val (start, end) = timestamps
           val textBuilder = StringBuilder()
@@ -35,7 +35,7 @@ object SrtParser : SubtitleFormatParser {
             val textLine = lines[i]
             val trimmed = textLine.trim()
             if (trimmed.isEmpty()) break
-            if (trimmed.contains(" --> ") && parseTimestampLine(trimmed, null) != null) {
+            if (trimmed.contains(" --> ") && parseTimestampLine(trimmed) != null) {
               i--
               break
             }
@@ -54,7 +54,7 @@ object SrtParser : SubtitleFormatParser {
     return cues
   }
 
-  private fun parseTimestampLine(line: String, logger: Logger?): Pair<Long, Long>? {
+  private fun parseTimestampLine(line: String): Pair<Long, Long>? {
     val arrow = " --> "
     val arrowIndex = line.indexOf(arrow)
     if (arrowIndex == -1) return null
