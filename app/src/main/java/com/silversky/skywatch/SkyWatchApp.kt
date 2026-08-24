@@ -106,7 +106,9 @@ fun SkyWatchApp() {
           },
           onBack = {
             viewModel.disconnect {
-              navController.popBackStack()
+              if (navController.currentBackStackEntry?.destination?.route == Routes.SHARES) {
+                navController.popBackStack()
+              }
             }
           },
       )

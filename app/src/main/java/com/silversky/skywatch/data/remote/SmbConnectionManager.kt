@@ -16,7 +16,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 sealed interface ConnectionState {
@@ -96,7 +95,7 @@ constructor(
     selectedShare = null
   }
 
-  fun disconnect() {
+  suspend fun disconnect() {
     val client = smbClient
     smbClient = null
     selectedServer = null
@@ -104,7 +103,7 @@ constructor(
     selectedFile = null
     _connectionState.value = ConnectionState.Disconnected
 
-    applicationScope.launch(Dispatchers.IO) {
+    withContext(Dispatchers.IO) {
       try {
         client?.close()
       } catch (e: Exception) {

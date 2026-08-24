@@ -1,5 +1,6 @@
 package com.silversky.skywatch.ui.screen
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -36,18 +37,17 @@ fun ShareScreen(
   val error = viewModel.error
   val server = viewModel.server
 
+  BackHandler {
+    onBack()
+  }
+
   LaunchedEffect(Unit) {
     viewModel.loadShares()
   }
 
-  if (server == null) {
-    onBack()
-    return
-  }
-
   Column(modifier = Modifier.fillMaxSize().padding(48.dp)) {
     ScreenHeader(
-        title = server.name ?: server.ipAddress,
+        title = server?.name ?: server?.ipAddress ?: "Disconnected",
         subtitle = "Select a share",
         onBack = onBack,
     )
@@ -55,6 +55,10 @@ fun ShareScreen(
     Spacer(modifier = Modifier.height(32.dp))
 
     when {
+      server == null -> {
+        EmptyMessage("Disconnected from server.")
+      }
+
       loading -> {
         LoadingMessage("Loading shares...")
       }

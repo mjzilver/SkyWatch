@@ -68,11 +68,9 @@ constructor(
   }
 
   fun disconnect(onDisconnected: () -> Unit) {
-    viewModelScope.launch(Dispatchers.IO) {
+    viewModelScope.launch {
       connectionManager.disconnect()
-      withContext(Dispatchers.Main) {
-        onDisconnected()
-      }
+      onDisconnected()
     }
   }
 }
