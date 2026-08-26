@@ -38,7 +38,6 @@ constructor(
 
     viewModelScope.launch(Dispatchers.IO) {
       try {
-        logger.info("Starting SMB network scan")
         val discoveredServers = smbScanner.scanNetwork(logger)
         val results = discoveredServers.map { server ->
           ScanResult(ip = server.ipAddress, name = server.name ?: server.ipAddress)

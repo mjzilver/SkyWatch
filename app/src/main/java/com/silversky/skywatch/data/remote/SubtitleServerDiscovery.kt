@@ -37,7 +37,6 @@ constructor(
         synchronized(this@SubtitleServerDiscovery) {
           if (jmdns != null) return@synchronized
           jmdns = JmDNS.create(localIp)
-          logger.debug("Starting subtitle server discovery on $localIp")
 
           val currentListener =
               object : ServiceListener {

@@ -20,7 +20,7 @@ class NetworkUtils {
             ?.name
             ?.name
       } catch (e: Exception) {
-        logger.debug("Failed to resolve NetBIOS name for $ip: ${e.message}")
+        logger.warn("Failed to resolve NetBIOS name for $ip: ${e.message}")
         null
       }
     }

@@ -269,8 +269,6 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
       val currentPassword =
           password ?: throw IllegalStateException("No password available for reconnect")
 
-      logger.info("Reconnecting to ${currentServer.name ?: currentServer.ipAddress}")
-
       invalidateConnectionLocked()
 
       connectLocked(
@@ -290,10 +288,6 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
     if (connection != null && session != null) {
       return
     }
-
-    logger.info(
-        "Connecting to ${server.name ?: server.ipAddress} " + "(${server.ipAddress}:${server.port})"
-    )
 
     var newConnection: Connection? = null
 
@@ -333,8 +327,6 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
       if (server.name == null) {
         server.name = newConnection.connectionContext.server.serverName
       }
-
-      logger.info("Connected to ${server.name ?: server.ipAddress} as $username")
     } catch (e: Exception) {
       try {
         newConnection?.close()
@@ -425,8 +417,6 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
       server = null
       username = null
       password = null
-
-      logger.debug("Disconnected")
     }
   }
 

@@ -49,41 +49,17 @@ class SubtitleService(
 
     println("Cache miss: $media")
 
-    // Nothing cached, search SubDL.
-    var response =
+    val response =
         client.get("https://api.subdl.com/api/v2/files/search") {
           parameter("filename", filename)
           parameter("languages", "en")
           bearerAuth(config.apiKey)
         }
 
-    var body = response.bodyAsText()
-    var result = json.decodeFromString<SubDlSearchResponse>(body)
-
-    // If filename search yielded nothing, try searching by parsed title.
-    if (result.subtitles.isEmpty() && media.title.isNotBlank()) {
-      println("Filename search failed, trying title search: ${media.title} (${media.year})")
-      response =
-          client.get("https://api.subdl.com/api/v2/files/search") {
-            parameter(
-                "query",
-                if (media.year != null) "${media.title} ${media.year}" else media.title,
-            )
-            parameter("languages", "en")
-            if (media.season != null) parameter("season", media.season)
-            if (media.episode != null) parameter("episode", media.episode)
-            bearerAuth(config.apiKey)
-          }
-      body = response.bodyAsText()
-      result = json.decodeFromString<SubDlSearchResponse>(body)
-    }
-
+    val result = json.decodeFromString<SubDlSearchResponse>(response.bodyAsText())
     println("Received ${result.subtitles.size} subtitles for $filename")
 
-    val matches =
-        result.subtitles
-            .sortedByDescending { it.matchScore }
-            .take(5) // Download top 5 for better variety
+    val matches = result.subtitles.sortedByDescending { it.matchScore }.take(5)
 
     if (matches.isEmpty()) {
       println("No subtitles found for $filename, caching negative result.")
@@ -91,11 +67,8 @@ class SubtitleService(
       return null
     }
 
-    println("Downloading ${matches.size} top matches...")
-
     for (match in matches) {
       try {
-        println("Downloading match: ${match.releaseName} (${match.matchScore})")
         val fileResponse = client.get("https://api.subdl.com/${match.url}")
         if (fileResponse.status.value == 200) {
           val zipBytes = fileResponse.body<ByteArray>()
@@ -122,12 +95,7 @@ class SubtitleService(
           zip.copyTo(output)
 
           val bytes = output.toByteArray()
-
-          println("Found subtitle: ${entry.name}")
-
           val subtitleMedia = filenameParser.parse(entry.name)
-
-          println("Parsed subtitle: $subtitleMedia")
 
           if (subtitleMedia.title.isNotBlank()) {
             repository.save(

@@ -68,12 +68,10 @@ constructor(
   fun startDiscovery() {
     if (_isDiscovering.value) return
     _isDiscovering.value = true
-    logger.debug("Starting background subtitle server discovery")
     subtitleServerDiscovery.start { ip, port ->
       val address = "$ip:$port"
       scope.launch {
         if (healthCheck(address)) {
-          logger.info("Auto-discovered valid subtitle server: $address")
           _autoDiscoveredAddress.value = address
         }
       }
@@ -83,7 +81,6 @@ constructor(
   fun stopDiscovery() {
     if (!_isDiscovering.value) return
     _isDiscovering.value = false
-    logger.debug("Stopping background subtitle server discovery")
     subtitleServerDiscovery.stop()
   }
 

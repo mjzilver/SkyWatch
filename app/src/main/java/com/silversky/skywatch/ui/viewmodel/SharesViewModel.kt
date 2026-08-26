@@ -45,9 +45,7 @@ constructor(
 
     viewModelScope.launch(Dispatchers.IO) {
       try {
-        logger.debug("Loading shares from ${server.ipAddress}")
         val result = client.listShares()
-        logger.info("Found ${result.size} shares")
         withContext(Dispatchers.Main) {
           shares = result
           loading = false

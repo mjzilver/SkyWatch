@@ -177,8 +177,6 @@ constructor(
       error = null
 
       try {
-        logger.info("Starting playback: //${share}/${smbFile.path}")
-
         savedState =
             playbackStateStore.get(
                 client.server!!.ipAddress,
@@ -406,7 +404,6 @@ constructor(
   }
 
   override fun onCleared() {
-    logger.debug("Releasing player")
     savePlaybackState()
     player.stop()
     player.release()
