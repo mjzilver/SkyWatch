@@ -15,10 +15,6 @@ dependencies {
   implementation(libs.smbj)
   implementation(libs.dcerpc)
   implementation(libs.kotlinx.serialization.json)
-  implementation("eu.agno3.jcifs:jcifs-ng:2.1.9") {
-    exclude(
-        group = "org.bouncycastle",
-        module = "bcprov-jdk15on",
-    )
+  implementation(libs.jcifs.ng) 
   }
 }
