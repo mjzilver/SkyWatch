@@ -2,19 +2,27 @@ package com.silversky.skywatch.data.repository
 
 import android.content.Context
 import android.util.Log
+import com.silversky.skywatch.di.ApplicationScope
 import com.silversky.skywatch.model.Settings
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
 @Singleton
-class SettingsRepository @Inject constructor(private val context: Context) {
+class SettingsRepository
+@Inject
+constructor(
+    private val context: Context,
+    @ApplicationScope private val scope: CoroutineScope,
+) {
   private val json = Json { ignoreUnknownKeys = true }
   private val fileName = "settings.json"
 
@@ -22,7 +30,7 @@ class SettingsRepository @Inject constructor(private val context: Context) {
   val settings: StateFlow<Settings> = _settings.asStateFlow()
 
   init {
-    loadSettings()
+    scope.launch(Dispatchers.IO) { loadSettings() }
   }
 
   private fun loadSettings() {

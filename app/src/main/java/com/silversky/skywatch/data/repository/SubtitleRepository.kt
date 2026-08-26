@@ -44,7 +44,7 @@ constructor(
     private val filenameParser: FilenameParser,
     @ApplicationScope private val applicationScope: CoroutineScope,
 ) {
-  private val config = ConfigLoader.load(context, logger)
+  private val config by lazy { ConfigLoader.load(context, logger) }
   private val subtitleDir = File(context.filesDir, "subtitles").apply { mkdirs() }
 
   private val client =
@@ -64,7 +64,8 @@ constructor(
 
   suspend fun search(query: String): SubtitleSearchResult? =
       withContext(Dispatchers.IO) {
-        if (config == null || config.apiKey.isBlank()) {
+        val currentConfig = config
+        if (currentConfig == null || currentConfig.apiKey.isBlank()) {
           logger.error("Subtitle API key missing. Subtitle features disabled.")
           return@withContext null
         }
@@ -102,7 +103,7 @@ constructor(
                   .get("https://api.subdl.com/api/v2/files/search") {
                     parameter("filename", query)
                     parameter("languages", "en")
-                    bearerAuth(config.apiKey)
+                    bearerAuth(currentConfig.apiKey)
                   }
                   .body()
 

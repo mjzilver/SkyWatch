@@ -96,6 +96,8 @@ constructor(
     private set
 
   private var savedState: PlaybackState? = null
+  private var tracksApplied = false
+  private var saveJob: kotlinx.coroutines.Job? = null
 
   val client
     get() = connectionManager.smbClient
@@ -136,6 +138,19 @@ constructor(
 
           override fun onIsPlayingChanged(isPlaying: Boolean) {
             this@PlayerViewModel.isPlaying = isPlaying
+          }
+
+          override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+            if (!tracksApplied && !tracks.groups.isEmpty()) {
+              applySavedTracks()
+            }
+          }
+
+          override fun onMediaItemTransition(
+              mediaItem: androidx.media3.common.MediaItem?,
+              reason: Int
+          ) {
+            tracksApplied = false
           }
 
           override fun onCues(cueGroup: androidx.media3.common.text.CueGroup) {
@@ -204,8 +219,6 @@ constructor(
           position = savedPosition
         }
 
-        applySavedTracks()
-
         player.playWhenReady = true
         loading = false
       } catch (e: Exception) {
@@ -219,12 +232,11 @@ constructor(
   private fun applySavedTracks() {
     val state = savedState ?: return
     val smbFile = file ?: return
-    viewModelScope.launch {
-      while (player.currentTracks.groups.isEmpty() && isActive) {
-        delay(100L.milliseconds)
-      }
-      if (!isActive) return@launch
+    if (player.currentTracks.groups.isEmpty()) return
 
+    tracksApplied = true
+
+    viewModelScope.launch {
       state.audioTrack?.let { id ->
         findTrack(player, C.TRACK_TYPE_AUDIO, id)?.let { selection ->
           player.trackSelectionParameters =
@@ -293,39 +305,41 @@ constructor(
     val share = shareName ?: return
     val smbFile = file ?: return
 
-    viewModelScope.launch {
-      val currentPos = player.currentPosition.coerceAtLeast(0L)
-      val totalDuration = player.duration.takeIf { it > 0L } ?: 0L
+    saveJob?.cancel()
+    saveJob =
+        viewModelScope.launch {
+          val currentPos = player.currentPosition.coerceAtLeast(0L)
+          val totalDuration = player.duration.takeIf { it > 0L } ?: 0L
 
-      val percent = if (totalDuration > 0) currentPos.toDouble() / totalDuration else 0.0
+          val percent = if (totalDuration > 0) currentPos.toDouble() / totalDuration else 0.0
 
-      val isCompleted = isFinished || percent >= 0.90
-      val shouldReset = isFinished || percent > 0.99
+          val isCompleted = isFinished || percent >= 0.90
+          val shouldReset = isFinished || percent > 0.99
 
-      val finalPosition = if (shouldReset) 0L else currentPos
+          val finalPosition = if (shouldReset) 0L else currentPos
 
-      val subTrack =
-          if (externalSubtitleName != null) {
-            externalSubtitleName
-          } else {
-            getSelectedSubtitleTrackId(player)
-          }
+          val subTrack =
+              if (externalSubtitleName != null) {
+                externalSubtitleName
+              } else {
+                getSelectedSubtitleTrackId(player)
+              }
 
-      playbackStateStore.save(
-          ip = client.server!!.ipAddress,
-          share = share,
-          path = smbFile.path,
-          state =
-              PlaybackState(
-                  position = finalPosition,
-                  duration = totalDuration,
-                  audioTrack = getSelectedTrackId(player, C.TRACK_TYPE_AUDIO),
-                  subtitleTrack = subTrack,
-                  completed = isCompleted,
-                  subtitleOffset = subtitleOffset,
-              ),
-      )
-    }
+          playbackStateStore.save(
+              ip = client.server!!.ipAddress,
+              share = share,
+              path = smbFile.path,
+              state =
+                  PlaybackState(
+                      position = finalPosition,
+                      duration = totalDuration,
+                      audioTrack = getSelectedTrackId(player, C.TRACK_TYPE_AUDIO),
+                      subtitleTrack = subTrack,
+                      completed = isCompleted,
+                      subtitleOffset = subtitleOffset,
+                  ),
+          )
+        }
   }
 
   fun togglePlay() {

@@ -2,14 +2,17 @@ package com.silversky.skywatch.data.repository
 
 import android.content.Context
 import android.util.Log
+import com.silversky.skywatch.di.ApplicationScope
 import com.silversky.skywatch.model.SavedServer
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
@@ -18,6 +21,7 @@ class PersistentServerRepository
 @Inject
 constructor(
     private val context: Context,
+    @ApplicationScope private val scope: CoroutineScope,
 ) : ServerRepository {
 
   private val json = Json { ignoreUnknownKeys = true }
@@ -27,7 +31,7 @@ constructor(
   override val servers: StateFlow<List<SavedServer>> = _servers.asStateFlow()
 
   init {
-    loadServersFromDisk()
+    scope.launch(Dispatchers.IO) { loadServersFromDisk() }
   }
 
   override suspend fun addServer(server: SavedServer) =

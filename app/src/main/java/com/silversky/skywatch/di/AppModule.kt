@@ -40,8 +40,10 @@ object AppModule {
 
   @Provides
   @Singleton
-  fun provideServerRepository(@ApplicationContext context: Context): ServerRepository =
-      PersistentServerRepository(context)
+  fun provideServerRepository(
+      @ApplicationContext context: Context,
+      @ApplicationScope scope: CoroutineScope,
+  ): ServerRepository = PersistentServerRepository(context, scope)
 
   @Provides @Singleton fun provideSmbScanner(): SmbScanner = SmbScanner()
 
@@ -52,8 +54,10 @@ object AppModule {
 
   @Provides
   @Singleton
-  fun provideSettingsRepository(@ApplicationContext context: Context): SettingsRepository =
-      SettingsRepository(context)
+  fun provideSettingsRepository(
+      @ApplicationContext context: Context,
+      @ApplicationScope scope: CoroutineScope,
+  ): SettingsRepository = SettingsRepository(context, scope)
 
   @Provides
   @Singleton
