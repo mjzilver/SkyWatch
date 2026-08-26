@@ -1,4 +1,4 @@
-package com.silversky.subtitle.server.parser
+package com.silversky.core.parser
 
 class TokenClassifier {
 

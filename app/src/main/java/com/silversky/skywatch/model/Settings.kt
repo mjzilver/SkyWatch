@@ -17,7 +17,6 @@ enum class SortOrder {
 
 @Serializable
 data class Settings(
-    val subtitleServerAddress: String? = null,
     val sortBy: SortBy = SortBy.Name,
     val sortOrder: SortOrder = SortOrder.Ascending,
     val foldersFirst: Boolean = false,

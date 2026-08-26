@@ -1,23 +1,19 @@
 [versions]
-agp = "9.3.1"
+agp = "9.3.2"
 coreKtx = "1.19.0"
 appcompat = "1.8.0"
 datastorePreferences = "1.2.1"
 dcerpc = "0.12.13"
-exposedCore = "1.4.0"
-exposedJdbc = "1.4.0"
 jmdns = "3.6.3"
 kotlin = "2.4.10"
 composeBom = "2026.08.00"
 kotlinxSerializationJson = "1.11.0"
 ktorSerializationKotlinxJson = "3.5.2"
-ktorServerContentNegotiation = "3.5.2"
 ktorServerCore = "3.5.2"
-ktorServerNetty = "3.5.2"
 media3Exoplayer = "1.11.0"
 media3Ui = "1.11.0"
 smbj = "0.14.0"
-sqliteJdbc = "3.53.2.1"
+room = "2.8.4"
 tvFoundation = "1.0.0"
 tvMaterial = "1.1.0"
 lifecycleRuntimeKtx = "2.11.0"
@@ -50,22 +46,19 @@ androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lif
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
 dcerpc = { module = "com.rapid7.client:dcerpc", version.ref = "dcerpc" }
-exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposedCore" }
-exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposedJdbc" }
 jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
 kotlin-test-junit = { group = "org.jetbrains.kotlin", name = "kotlin-test-junit", version.ref = "kotlin" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktorSerializationKotlinxJson" }
-ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktorServerContentNegotiation" }
-ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktorServerCore" }
-ktor-server-netty = { module = "io.ktor:ktor-server-netty", version.ref = "ktorServerNetty" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 smbj = { module = "com.hierynomus:smbj", version.ref = "smbj" }
-sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqliteJdbc" }
+room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktorServerCore" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktorServerCore" }
 ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktorServerCore" }

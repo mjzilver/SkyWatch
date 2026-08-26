@@ -1,88 +1,51 @@
 package com.silversky.skywatch.data.repository
 
+import android.content.Context
 import com.silversky.core.logger.Logger
+import com.silversky.core.parser.FilenameParser
+import com.silversky.skywatch.config.ConfigLoader
+import com.silversky.skywatch.data.local.db.MediaEntity
+import com.silversky.skywatch.data.local.db.SubtitleDao
+import com.silversky.skywatch.data.local.db.SubtitleEntity
+import com.silversky.skywatch.data.remote.SubDlSearchResponse
+import com.silversky.skywatch.di.ApplicationScope
+import com.silversky.skywatch.model.SubtitleResult
 import com.silversky.skywatch.model.SubtitleSearchResult
+import dagger.hilt.android.qualifiers.ApplicationContext
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logging
+import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
-import io.ktor.client.statement.HttpResponse
-import io.ktor.http.isSuccess
+import io.ktor.client.request.parameter
 import io.ktor.serialization.kotlinx.json.json
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.util.UUID
+import java.util.zip.ZipInputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
 @Singleton
 class SubtitleRepository
 @Inject
 constructor(
+    @ApplicationContext private val context: Context,
     private val logger: Logger,
-    private val settingsRepository: SettingsRepository,
-    private val subtitleServerDiscovery: com.silversky.skywatch.data.remote.SubtitleServerDiscovery,
+    private val subtitleDao: SubtitleDao,
+    private val filenameParser: FilenameParser,
+    @ApplicationScope private val applicationScope: CoroutineScope,
 ) {
-  private val _autoDiscoveredAddress = MutableStateFlow<String?>(null)
-  val autoDiscoveredAddress: StateFlow<String?> = _autoDiscoveredAddress.asStateFlow()
-
-  private val _manualAddress = MutableStateFlow<String?>(null)
-  private val _serverAddress = MutableStateFlow<String?>(null)
-  private val scope = CoroutineScope(Dispatchers.Main)
-
-  init {
-    scope.launch {
-      settingsRepository.settings.collect { settings ->
-        val newManualAddress = settings.subtitleServerAddress?.takeIf { it.isNotBlank() }
-        _manualAddress.value = newManualAddress
-
-        if (newManualAddress != null) {
-          stopDiscovery()
-          _serverAddress.value = newManualAddress
-        } else {
-          _serverAddress.value = _autoDiscoveredAddress.value
-          startDiscovery()
-        }
-      }
-    }
-
-    scope.launch {
-      _autoDiscoveredAddress.collect { autoAddress ->
-        if (_manualAddress.value == null) {
-          _serverAddress.value = autoAddress
-        }
-      }
-    }
-  }
-
-  private val _isDiscovering = MutableStateFlow(false)
-  val isDiscovering: StateFlow<Boolean> = _isDiscovering.asStateFlow()
-
-  fun startDiscovery() {
-    if (_isDiscovering.value) return
-    _isDiscovering.value = true
-    subtitleServerDiscovery.start { ip, port ->
-      val address = "$ip:$port"
-      scope.launch {
-        if (healthCheck(address)) {
-          _autoDiscoveredAddress.value = address
-        }
-      }
-    }
-  }
-
-  fun stopDiscovery() {
-    if (!_isDiscovering.value) return
-    _isDiscovering.value = false
-    subtitleServerDiscovery.stop()
-  }
+  private val config = ConfigLoader.load(context, logger)
+  private val subtitleDir = File(context.filesDir, "subtitles").apply { mkdirs() }
 
   private val client =
       HttpClient(CIO) {
@@ -99,91 +62,193 @@ constructor(
         }
       }
 
-  private fun formatUrl(address: String, path: String): String {
-    val base =
-        if (!address.startsWith("http://") && !address.startsWith("https://")) {
-              "http://$address"
-            } else {
-              address
-            }
-            .removeSuffix("/")
+  suspend fun search(query: String): SubtitleSearchResult? =
+      withContext(Dispatchers.IO) {
+        if (config == null || config.apiKey.isBlank()) {
+          logger.error("Subtitle API key missing. Subtitle features disabled.")
+          return@withContext null
+        }
 
-    val cleanPath = path.removePrefix("/")
-    return "$base/$cleanPath"
-  }
+        val mediaInfo = filenameParser.parse(query)
 
-  suspend fun search(query: String): SubtitleSearchResult? {
-    val address =
-        _serverAddress.value
-            ?: throw IllegalStateException("No available subtitle server (check settings)")
-    try {
-      val response: HttpResponse =
-          client.get(formatUrl(address, "api/search")) {
-            url { parameters.append("query", query) }
+        val cachedMedia =
+            subtitleDao.getMedia(
+                mediaInfo.title,
+                mediaInfo.year,
+                mediaInfo.season,
+                mediaInfo.episode,
+                mediaInfo.edition,
+            )
+
+        if (cachedMedia != null) {
+          val cachedSubtitles = subtitleDao.getSubtitlesForMedia(cachedMedia.id)
+          if (cachedSubtitles.isNotEmpty()) {
+            logger.debug("Cache hit for $query: ${cachedSubtitles.size} subtitles")
+            return@withContext SubtitleSearchResult(
+                title = cachedMedia.title,
+                year = cachedMedia.year,
+                season = cachedMedia.season,
+                episode = cachedMedia.episode,
+                edition = cachedMedia.edition,
+                subtitles = cachedSubtitles.map { SubtitleResult(it.id, it.name) },
+            )
           }
-      if (response.status.isSuccess()) {
-        val result = runCatching {
-          response.body<SubtitleSearchResult>()
         }
-            .getOrElse {
-              runCatching {
-                val list = response.body<List<SubtitleSearchResult>>()
-                if (list.isNotEmpty()) {
-                  val first = list.first()
-                  SubtitleSearchResult(
-                      title = first.title,
-                      year = first.year,
-                      season = first.season,
-                      episode = first.episode,
-                      edition = first.edition,
-                      subtitles = list.flatMap { it.subtitles }.distinctBy { it.id },
-                  )
-                } else null
+
+        logger.debug("Cache miss for $query, searching SubDl")
+        try {
+          val response: SubDlSearchResponse =
+              client
+                  .get("https://api.subdl.com/api/v2/files/search") {
+                    parameter("filename", query)
+                    parameter("languages", "en")
+                    bearerAuth(config.apiKey)
+                  }
+                  .body()
+
+          if (!response.status || response.subtitles.isEmpty()) {
+            logger.debug("No subtitles found for $query")
+            return@withContext null
+          }
+
+          val topMatches = response.subtitles.sortedByDescending { it.matchScore }.take(5)
+
+          val mediaId =
+              cachedMedia?.id
+                  ?: UUID.randomUUID().toString().also { id ->
+                    subtitleDao.insertMedia(
+                        MediaEntity(
+                            id = id,
+                            title = mediaInfo.title,
+                            year = mediaInfo.year,
+                            season = mediaInfo.season,
+                            episode = mediaInfo.episode,
+                            edition = mediaInfo.edition,
+                        )
+                    )
+                  }
+
+          for (match in topMatches) {
+            try {
+              val zipResponse = client.get("https://api.subdl.com/${match.url}")
+              if (zipResponse.status.value == 200) {
+                val zipBytes = zipResponse.body<ByteArray>()
+                extractAndSaveSubtitles(zipBytes, mediaId)
               }
-                  .getOrNull()
+            } catch (e: Exception) {
+              logger.error("Failed to download match ${match.releaseName}", e)
             }
+          }
 
-        if (result == null || result.subtitles.isEmpty()) {
-          return null
+          val finalSubtitles = subtitleDao.getSubtitlesForMedia(mediaId)
+          return@withContext SubtitleSearchResult(
+              title = mediaInfo.title,
+              year = mediaInfo.year,
+              season = mediaInfo.season,
+              episode = mediaInfo.episode,
+              edition = mediaInfo.edition,
+              subtitles = finalSubtitles.map { SubtitleResult(it.id, it.name) },
+          )
+        } catch (e: Exception) {
+          logger.error("Failed to search subtitles for $query", e)
+          return@withContext null
         }
-        return result
-      } else {
-        logger.error("Subtitle search failed with status ${response.status}")
-        throw Exception("Server error: ${response.status}")
       }
-    } catch (e: Exception) {
-      if (e is IllegalStateException) throw e
-      logger.error("Failed to search subtitles for $query", e)
-      throw Exception("No available subtitle server (check settings)")
+
+  private suspend fun extractAndSaveSubtitles(zipBytes: ByteArray, mediaId: String) {
+    ZipInputStream(zipBytes.inputStream()).use { zip ->
+      var entry = zip.nextEntry
+      while (entry != null) {
+        if (!entry.isDirectory && (entry.name.endsWith(".srt") || entry.name.endsWith(".vtt"))) {
+          val output = ByteArrayOutputStream()
+          zip.copyTo(output)
+          val bytes = output.toByteArray()
+
+          val subtitleId = UUID.randomUUID().toString()
+          val file = File(subtitleDir, subtitleId)
+          file.writeBytes(bytes)
+
+          subtitleDao.insertSubtitle(
+              SubtitleEntity(
+                  id = subtitleId,
+                  mediaId = mediaId,
+                  name = entry.name,
+                  filePath = file.absolutePath,
+                  lastUsed = System.currentTimeMillis(),
+              )
+          )
+        }
+        zip.closeEntry()
+        entry = zip.nextEntry
+      }
+    }
+    triggerCleanup()
+  }
+
+  suspend fun downloadSubtitle(id: String): ByteArray =
+      withContext(Dispatchers.IO) {
+        val subtitle = subtitleDao.getSubtitle(id) ?: throw Exception("Subtitle not found")
+        val file = File(subtitle.filePath)
+        if (!file.exists()) {
+          subtitleDao.deleteSubtitleAndMediaIfEmpty(id)
+          throw Exception("Subtitle file missing on disk")
+        }
+
+        subtitleDao.updateLastUsed(id, System.currentTimeMillis())
+        return@withContext file.readBytes()
+      }
+
+  private fun triggerCleanup() {
+    applicationScope.launch(Dispatchers.IO) {
+      try {
+        cleanupCache()
+      } catch (e: Exception) {
+        logger.error("Cache cleanup failed", e)
+      }
     }
   }
 
-  suspend fun downloadSubtitle(id: String): ByteArray {
-    val address =
-        _serverAddress.value
-            ?: throw IllegalStateException("No available subtitle server (check settings)")
-    try {
-      val response: HttpResponse = client.get(formatUrl(address, "api/request/$id"))
-      if (response.status.isSuccess()) {
-        return response.body()
-      } else {
-        logger.error("Subtitle download failed with status ${response.status}")
-        throw Exception("Download failed: ${response.status}")
-      }
-    } catch (e: Exception) {
-      if (e is IllegalStateException) throw e
-      logger.error("Failed to download subtitle $id", e)
-      throw Exception("No available subtitle server (check settings)")
+  private suspend fun cleanupCache() {
+    val maxSizeBytes = 512L * 1024 * 1024 // 500MB
+    val targetSizeBytes = 256L * 1024 * 1024 // 250MB
+
+    val currentFiles = subtitleDir.listFiles() ?: return
+    var totalSize = currentFiles.sumOf { it.length() }
+
+    if (totalSize <= maxSizeBytes) return
+
+    logger.info(
+        "Subtitle cache size exceeded (${formatBytes(totalSize)}), cleaning up to ${formatBytes(targetSizeBytes)}"
+    )
+
+    val allSubtitles = subtitleDao.getAllSubtitlesSortedByUsage()
+    for (sub in allSubtitles) {
+      if (totalSize <= targetSizeBytes) break
+
+      val file = File(sub.filePath)
+      val size = if (file.exists()) file.length() else 0L
+
+      subtitleDao.deleteSubtitleAndMediaIfEmpty(sub.id)
+      if (file.exists()) file.delete()
+
+      totalSize -= size
     }
   }
 
-  suspend fun healthCheck(address: String): Boolean {
-    try {
-      val response: HttpResponse = client.get(formatUrl(address, "api/health"))
-      return response.status.isSuccess()
-    } catch (e: Exception) {
-      logger.error("Error during health check", e)
-      return false
+  private fun formatBytes(bytes: Long): String {
+    if (bytes < 1024) return "$bytes B"
+
+    val units = arrayOf("KB", "MB", "GB", "TB")
+    var value = bytes.toDouble()
+
+    for (unit in units) {
+      value /= 1024
+
+      if (value < 1024) {
+        return "%.1f %s".format(value, unit)
+      }
     }
+
+    return "%.1f PB".format(value / 1024)
   }
 }

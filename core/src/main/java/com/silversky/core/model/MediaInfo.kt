@@ -1,4 +1,4 @@
-package com.silversky.subtitle.server.model
+package com.silversky.core.model
 
 import kotlinx.serialization.Serializable
 

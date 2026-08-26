@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,7 +38,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -72,7 +72,6 @@ internal fun SubtitleDialog(
 ) {
   val uiState by viewModel.uiState.collectAsStateWithLifecycle()
   var selectedTab by remember { mutableStateOf(SubtitleTab.Local) }
-  val focusManager = LocalFocusManager.current
   val resetFocusRequester = remember { FocusRequester() }
   val tabFocusRequesters = remember { SubtitleTab.entries.map { FocusRequester() } }
 
@@ -90,7 +89,8 @@ internal fun SubtitleDialog(
   ) {
     Column(
         modifier =
-            Modifier.fillMaxWidth(0.6f)
+            Modifier.fillMaxWidth(0.8f)
+                .widthIn(max = 1200.dp)
                 .background(
                     Color(0xFF202020),
                     RoundedCornerShape(12.dp),
@@ -192,7 +192,9 @@ internal fun SubtitleDialog(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                   PlayerButton(
-                      text = if (uiState.isSearching) "Searching..." else "Search subtitle server",
+                      text =
+                          if (uiState.isSearching) "Searching..."
+                          else "Search for subtitles online",
                       onClick = { viewModel.searchOnline() },
                       modifier = Modifier.fillMaxWidth(),
                       content = {

@@ -1,8 +1,0 @@
-{
-  "port": 8020,
-  "apiKey": "",
-  "mdns": {
-    "service": "_skywatch-subtitle._tcp.local.",
-    "name": "SkyWatch Subtitle Server"
-  }
-}

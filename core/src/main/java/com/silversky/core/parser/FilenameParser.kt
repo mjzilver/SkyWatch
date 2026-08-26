@@ -1,6 +1,6 @@
-package com.silversky.subtitle.server.parser
+package com.silversky.core.parser
 
-import com.silversky.subtitle.server.model.MediaInfo
+import com.silversky.core.model.MediaInfo
 
 class FilenameParser(
     private val classifier: TokenClassifier,

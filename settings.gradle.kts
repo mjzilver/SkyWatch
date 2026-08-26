@@ -31,7 +31,3 @@ rootProject.name = "SkyWatch"
 include(":app")
 
 include(":core")
-
-include(":cli")
-
-include(":subtitle-server")

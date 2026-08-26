@@ -1,9 +1,14 @@
 package com.silversky.skywatch.di
 
 import android.content.Context
+import androidx.room.Room
 import com.silversky.core.logger.Logger
+import com.silversky.core.parser.FilenameParser
+import com.silversky.core.parser.TokenClassifier
 import com.silversky.core.smb.SmbScanner
 import com.silversky.skywatch.data.local.PlaybackStateStore
+import com.silversky.skywatch.data.local.db.AppDatabase
+import com.silversky.skywatch.data.local.db.SubtitleDao
 import com.silversky.skywatch.data.repository.PersistentServerRepository
 import com.silversky.skywatch.data.repository.ServerRepository
 import com.silversky.skywatch.data.repository.SettingsRepository
@@ -49,4 +54,18 @@ object AppModule {
   @Singleton
   fun provideSettingsRepository(@ApplicationContext context: Context): SettingsRepository =
       SettingsRepository(context)
+
+  @Provides
+  @Singleton
+  fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
+      Room.databaseBuilder(context, AppDatabase::class.java, "skywatch.db").build()
+
+  @Provides fun provideSubtitleDao(database: AppDatabase): SubtitleDao = database.subtitleDao()
+
+  @Provides @Singleton fun provideTokenClassifier(): TokenClassifier = TokenClassifier()
+
+  @Provides
+  @Singleton
+  fun provideFilenameParser(classifier: TokenClassifier): FilenameParser =
+      FilenameParser(classifier)
 }
