@@ -1,19 +1,14 @@
 package com.silversky.skywatch.ui.component
 
 import androidx.annotation.OptIn
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.Composable
@@ -22,8 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.TrackGroup
@@ -94,103 +87,82 @@ internal fun TrackDialog(
     allowOff: Boolean,
     onDismiss: () -> Unit,
 ) {
-  Dialog(
-      onDismissRequest = onDismiss,
-      properties =
-          DialogProperties(
-              dismissOnBackPress = true,
-              dismissOnClickOutside = true,
-          ),
-  ) {
-    Column(
-        modifier =
-            Modifier.fillMaxWidth(0.65f)
-                .background(
-                    Color(0xFF202020),
-                    RoundedCornerShape(12.dp),
-                )
-                .padding(32.dp),
-    ) {
-      Text(
-          text = title,
-          color = Color.White,
-      )
-
-      Spacer(modifier = Modifier.height(20.dp))
-
-      if (tracks.isEmpty()) {
-        Text(
-            text = "No $title tracks available.",
-            color = Color.LightGray,
+  SkyWatchDialog(
+      title = title,
+      onDismiss = onDismiss,
+      modifier = Modifier.fillMaxWidth(0.65f),
+      buttons = {
+        PlayerButton(
+            text = "Close",
+            onClick = onDismiss,
         )
-      } else {
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-          if (allowOff) {
-            item {
-              TrackButton(
-                  text = "Off",
-                  selected = !player.currentTracks.isTypeSelected(trackType),
-                  onClick = {
-                    player.trackSelectionParameters =
-                        player.trackSelectionParameters
-                            .buildUpon()
-                            .setTrackTypeDisabled(
-                                trackType,
-                                true,
-                            )
-                            .build()
+      },
+  ) {
+    if (tracks.isEmpty()) {
+      Text(
+          text = "No $title tracks available.",
+          color = Color.LightGray,
+      )
+    } else {
+      LazyColumn(
+          verticalArrangement = Arrangement.spacedBy(8.dp),
+      ) {
+        if (allowOff) {
+          item {
+            TrackButton(
+                text = "Off",
+                selected = !player.currentTracks.isTypeSelected(trackType),
+                onClick = {
+                  player.trackSelectionParameters =
+                      player.trackSelectionParameters
+                          .buildUpon()
+                          .setTrackTypeDisabled(
+                              trackType,
+                              true,
+                          )
+                          .build()
 
-                    onDismiss()
-                  },
-              )
-            }
+                  onDismiss()
+                },
+            )
           }
+        }
 
-          items(tracks.indices.toList()) { groupIndex ->
-            val group = tracks[groupIndex]
+        items(tracks.indices.toList()) { groupIndex ->
+          val group = tracks[groupIndex]
 
-            for (trackIndex in 0 until group.length) {
-              val format = group.getTrackFormat(trackIndex)
+          for (trackIndex in 0 until group.length) {
+            val format = group.getTrackFormat(trackIndex)
 
-              val label = format.label ?: format.language ?: "Track ${trackIndex + 1}"
+            val label = format.label ?: format.language ?: "Track ${trackIndex + 1}"
 
-              val selected = group.isTrackSelected(trackIndex)
+            val selected = group.isTrackSelected(trackIndex)
 
-              TrackButton(
-                  text = label,
-                  selected = selected,
-                  onClick = {
-                    player.trackSelectionParameters =
-                        player.trackSelectionParameters
-                            .buildUpon()
-                            .setTrackTypeDisabled(
-                                trackType,
-                                false,
-                            )
-                            .setOverrideForType(
-                                TrackSelectionOverride(
-                                    group.mediaTrackGroup,
-                                    listOf(trackIndex),
-                                )
-                            )
-                            .build()
+            TrackButton(
+                text = label,
+                selected = selected,
+                onClick = {
+                  player.trackSelectionParameters =
+                      player.trackSelectionParameters
+                          .buildUpon()
+                          .setTrackTypeDisabled(
+                              trackType,
+                              false,
+                          )
+                          .setOverrideForType(
+                              TrackSelectionOverride(
+                                  group.mediaTrackGroup,
+                                  listOf(trackIndex),
+                              )
+                          )
+                          .build()
 
-                    onDismiss()
-                  },
-              )
-            }
+                  onDismiss()
+                },
+            )
           }
         }
       }
-
-      Spacer(modifier = Modifier.height(20.dp))
-
-      PlayerButton(
-          text = "Close",
-          onClick = onDismiss,
-      )
     }
   }
 }

@@ -1,12 +1,8 @@
 package com.silversky.skywatch.ui.component
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -17,11 +13,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.tv.material3.Button
 import androidx.tv.material3.Checkbox
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 
 data class ServerConnectionInput(
@@ -71,74 +65,10 @@ fun ServerDialog(
 
   val connectButtonRequester = remember { FocusRequester() }
 
-  Dialog(onDismissRequest = onDismiss) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(32.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-      Text(
-          text = if (isEditing) "Edit SMB Server" else "Add SMB Server",
-          style = MaterialTheme.typography.headlineSmall,
-      )
-
-      Spacer(modifier = Modifier.height(8.dp))
-
-      TvTextField(
-          value = name,
-          onValueChange = { name = it },
-          label = "Name",
-      )
-
-      TvTextField(
-          value = address,
-          onValueChange = { address = it },
-          label = "IP address",
-      )
-
-      Button(
-          onClick = {
-            useGuestAccount = !useGuestAccount
-          },
-          modifier =
-              Modifier.fillMaxWidth().focusProperties {
-                if (useGuestAccount) {
-                  down = connectButtonRequester
-                }
-              },
-      ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-          Checkbox(
-              checked = useGuestAccount,
-              onCheckedChange = null,
-          )
-
-          Text("Use guest account")
-        }
-      }
-
-      TvTextField(
-          value = username,
-          onValueChange = { username = it },
-          label = "Username",
-          enabled = !useGuestAccount,
-      )
-
-      TvTextField(
-          value = password,
-          onValueChange = { password = it },
-          label = "Password",
-          enabled = !useGuestAccount,
-          modifier = Modifier.focusProperties { down = connectButtonRequester },
-      )
-
-      Spacer(modifier = Modifier.height(8.dp))
-
-      Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(12.dp),
-      ) {
+  SkyWatchDialog(
+      title = if (isEditing) "Edit SMB Server" else "Add SMB Server",
+      onDismiss = onDismiss,
+      buttons = {
         Button(
             onClick = {
               if (name.isNotBlank() && address.isNotBlank()) {
@@ -164,7 +94,54 @@ fun ServerDialog(
         ) {
           Text("Scan Network")
         }
+      },
+  ) {
+    TvTextField(
+        value = name,
+        onValueChange = { name = it },
+        label = "Name",
+    )
+
+    TvTextField(
+        value = address,
+        onValueChange = { address = it },
+        label = "IP address",
+    )
+
+    Button(
+        onClick = { useGuestAccount = !useGuestAccount },
+        modifier =
+            Modifier.fillMaxWidth().focusProperties {
+              if (useGuestAccount) {
+                down = connectButtonRequester
+              }
+            },
+    ) {
+      Row(
+          horizontalArrangement = Arrangement.spacedBy(12.dp),
+      ) {
+        Checkbox(
+            checked = useGuestAccount,
+            onCheckedChange = null,
+        )
+
+        Text("Use guest account")
       }
     }
+
+    TvTextField(
+        value = username,
+        onValueChange = { username = it },
+        label = "Username",
+        enabled = !useGuestAccount,
+    )
+
+    TvTextField(
+        value = password,
+        onValueChange = { password = it },
+        label = "Password",
+        enabled = !useGuestAccount,
+        modifier = Modifier.focusProperties { down = connectButtonRequester },
+    )
   }
 }
