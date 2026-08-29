@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.silversky.core.logger.Logger
+import com.silversky.core.model.SmbEntry
 import com.silversky.skywatch.data.remote.SmbConnectionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -21,7 +22,7 @@ constructor(
     private val logger: Logger,
 ) : ViewModel() {
 
-  var shares by mutableStateOf<List<String>>(emptyList())
+  var shares by mutableStateOf<List<SmbEntry>>(emptyList())
     private set
 
   var loading by mutableStateOf(false)
@@ -60,7 +61,7 @@ constructor(
     }
   }
 
-  fun selectShare(share: String, onShareSelected: () -> Unit) {
+  fun selectShare(share: SmbEntry, onShareSelected: () -> Unit) {
     connectionManager.onShareSelected(share)
     onShareSelected()
   }

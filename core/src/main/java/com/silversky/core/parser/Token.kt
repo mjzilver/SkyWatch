@@ -11,6 +11,6 @@ sealed interface Token {
 
   data class SeasonEpisode(
       val season: Int,
-      val episode: Int,
+      val episodes: List<Int>,
   ) : Token
 }

@@ -30,4 +30,6 @@ rootProject.name = "SkyWatch"
 
 include(":app")
 
+include(":cli")
+
 include(":core")

@@ -1,4 +1,4 @@
-package com.silversky.core.client
+package com.silversky.core.smb
 
 import com.hierynomus.msdtyp.AccessMask
 import com.hierynomus.msfscc.FileAttributes
@@ -17,10 +17,11 @@ import com.hierynomus.smbj.share.DiskShare
 import com.rapid7.client.dcerpc.mssrvs.ServerService
 import com.rapid7.client.dcerpc.transport.SMBTransportFactories
 import com.silversky.core.logger.Logger
-import com.silversky.core.smb.SmbEntry
-import com.silversky.core.smb.SmbFile
-import com.silversky.core.smb.SmbFileImpl
-import com.silversky.core.smb.SmbServer
+import com.silversky.core.model.SmbEntry
+import com.silversky.core.model.SmbEntryType
+import com.silversky.core.model.SmbFile
+import com.silversky.core.model.SmbFileImpl
+import com.silversky.core.model.SmbServer
 import java.io.InterruptedIOException
 import java.util.EnumSet
 import java.util.concurrent.ExecutionException
@@ -66,15 +67,24 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
     }
   }
 
-  fun listShares(): List<String> {
+  fun listShares(): List<SmbEntry> {
     return withReconnectRetry {
       synchronized(connectionLock) {
         val session = requireSession()
-
         val transport = SMBTransportFactories.SRVSVC.getTransport(session)
         val serverService = ServerService(transport)
 
-        serverService.shares1.filterNotNull().filter { it.type == 0 }.map { it.netName }
+        serverService.shares1
+            .filterNotNull()
+            .filter { it.type == 0 }
+            .map { share ->
+              SmbEntry(
+                  name = share.netName,
+                  type = SmbEntryType.Share,
+                  path = "",
+                  shareName = share.netName,
+              )
+            }
       }
     }
   }
@@ -119,12 +129,30 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
               SmbEntry(
                   name = file.fileName,
                   path = filePath,
-                  isDirectory = isDirectory(file),
+                  type =
+                      when {
+                        isDirectory(file) -> SmbEntryType.Directory
+                        else -> SmbEntryType.File
+                      },
                   size = file.endOfFile,
                   dateModified = file.lastWriteTime.toEpochMillis(),
                   isHidden = isHidden(file),
+                  shareName = shareName,
               )
             }
+      }
+    }
+  }
+
+  fun listTree(
+      shareName: String,
+      path: String = "",
+  ): List<SmbEntry> {
+    return list(shareName, path).map { entry ->
+      if (entry.type == SmbEntryType.Directory) {
+        entry.copy(children = listTree(shareName, entry.path))
+      } else {
+        entry
       }
     }
   }

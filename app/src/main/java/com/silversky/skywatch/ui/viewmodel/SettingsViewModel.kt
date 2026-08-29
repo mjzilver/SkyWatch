@@ -43,6 +43,12 @@ constructor(
     }
   }
 
+  fun updateMediaPriority(priority: com.silversky.skywatch.model.MediaPriority) {
+    viewModelScope.launch {
+      settingsRepository.updateSettings { it.copy(mediaPriority = priority) }
+    }
+  }
+
   fun updateSubtitleFontSize(size: Int) {
     viewModelScope.launch {
       settingsRepository.updateSettings { it.copy(subtitleFontSize = size) }

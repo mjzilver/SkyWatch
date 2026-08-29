@@ -5,9 +5,9 @@ import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.BaseDataSource
 import androidx.media3.datasource.DataSpec
-import com.silversky.core.client.SmbClient
 import com.silversky.core.logger.Logger
-import com.silversky.core.smb.SmbFile
+import com.silversky.core.model.SmbFile
+import com.silversky.core.smb.SmbClient
 import java.io.IOException
 import java.io.InterruptedIOException
 

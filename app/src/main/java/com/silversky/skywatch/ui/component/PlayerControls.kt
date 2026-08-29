@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.tv.material3.Button
 import androidx.tv.material3.Text
-import com.silversky.core.smb.SmbEntry
+import com.silversky.core.model.SmbEntry
 import com.silversky.skywatch.utils.formatTime
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.milliseconds

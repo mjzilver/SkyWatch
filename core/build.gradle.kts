@@ -15,6 +15,7 @@ dependencies {
   implementation(libs.smbj)
   implementation(libs.dcerpc)
   implementation(libs.kotlinx.serialization.json)
-  implementation(libs.jcifs.ng) 
-  }
+  implementation(libs.jcifs.ng)
+  testImplementation(libs.kotlin.test)
+  testImplementation(libs.kotlin.test.junit)
 }

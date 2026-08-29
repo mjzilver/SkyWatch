@@ -11,6 +11,7 @@ import com.silversky.skywatch.ui.component.ServerDialog
 import com.silversky.skywatch.ui.screen.FileBrowserScreen
 import com.silversky.skywatch.ui.screen.HomeScreen
 import com.silversky.skywatch.ui.screen.PlayerScreen
+import com.silversky.skywatch.ui.screen.SeriesDetailScreen
 import com.silversky.skywatch.ui.screen.SettingsScreen
 import com.silversky.skywatch.ui.screen.ShareScreen
 import com.silversky.skywatch.ui.viewmodel.DialogState
@@ -18,6 +19,7 @@ import com.silversky.skywatch.ui.viewmodel.FileBrowserViewModel
 import com.silversky.skywatch.ui.viewmodel.HomeViewModel
 import com.silversky.skywatch.ui.viewmodel.PlayerViewModel
 import com.silversky.skywatch.ui.viewmodel.ScanViewModel
+import com.silversky.skywatch.ui.viewmodel.SeriesDetailViewModel
 import com.silversky.skywatch.ui.viewmodel.ServerViewModel
 import com.silversky.skywatch.ui.viewmodel.SettingsViewModel
 import com.silversky.skywatch.ui.viewmodel.SharesViewModel
@@ -26,6 +28,7 @@ object Routes {
   const val HOME = "home"
   const val SHARES = "shares"
   const val BROWSER = "browser"
+  const val SERIES_DETAIL = "series_detail"
   const val PLAYER = "player"
   const val SETTINGS = "settings"
 }
@@ -119,12 +122,18 @@ fun SkyWatchApp() {
 
       FileBrowserScreen(
           viewModel = viewModel,
-          onFileSelected = { file ->
-            navController.navigate(Routes.PLAYER)
-          },
-          onBack = {
-            navController.popBackStack()
-          },
+          onFileSelected = { file -> navController.navigate(Routes.PLAYER) },
+          onSeriesSelected = { navController.navigate(Routes.SERIES_DETAIL) },
+          onBack = { navController.popBackStack() },
+      )
+    }
+
+    composable(Routes.SERIES_DETAIL) {
+      val viewModel: SeriesDetailViewModel = hiltViewModel()
+      SeriesDetailScreen(
+          viewModel = viewModel,
+          onEpisodeSelected = { navController.navigate(Routes.PLAYER) },
+          onBack = { navController.popBackStack() },
       )
     }
 

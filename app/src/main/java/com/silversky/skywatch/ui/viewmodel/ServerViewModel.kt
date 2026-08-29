@@ -6,7 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.silversky.core.logger.Logger
-import com.silversky.core.smb.SmbServer
+import com.silversky.core.model.SmbServer
 import com.silversky.skywatch.data.repository.ServerRepository
 import com.silversky.skywatch.model.SavedServer
 import com.silversky.skywatch.ui.component.ServerConnectionInput

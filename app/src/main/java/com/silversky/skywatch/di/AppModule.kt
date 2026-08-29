@@ -8,6 +8,7 @@ import com.silversky.core.parser.TokenClassifier
 import com.silversky.core.smb.SmbScanner
 import com.silversky.skywatch.data.local.PlaybackStateStore
 import com.silversky.skywatch.data.local.db.AppDatabase
+import com.silversky.skywatch.data.local.db.ScannedMediaDao
 import com.silversky.skywatch.data.local.db.SubtitleDao
 import com.silversky.skywatch.data.repository.PersistentServerRepository
 import com.silversky.skywatch.data.repository.ServerRepository
@@ -62,9 +63,14 @@ object AppModule {
   @Provides
   @Singleton
   fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
-      Room.databaseBuilder(context, AppDatabase::class.java, "skywatch.db").build()
+      Room.databaseBuilder(context, AppDatabase::class.java, "skywatch.db")
+          .fallbackToDestructiveMigration()
+          .build()
 
   @Provides fun provideSubtitleDao(database: AppDatabase): SubtitleDao = database.subtitleDao()
+
+  @Provides
+  fun provideScannedMediaDao(database: AppDatabase): ScannedMediaDao = database.scannedMediaDao()
 
   @Provides @Singleton fun provideTokenClassifier(): TokenClassifier = TokenClassifier()
 

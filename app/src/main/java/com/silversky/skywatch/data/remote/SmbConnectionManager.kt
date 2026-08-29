@@ -3,10 +3,10 @@ package com.silversky.skywatch.data.remote
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.silversky.core.client.SmbClient
 import com.silversky.core.logger.Logger
-import com.silversky.core.smb.SmbEntry
-import com.silversky.core.smb.SmbServer
+import com.silversky.core.model.SmbEntry
+import com.silversky.core.model.SmbServer
+import com.silversky.core.smb.SmbClient
 import com.silversky.skywatch.di.ApplicationScope
 import com.silversky.skywatch.model.SavedServer
 import javax.inject.Inject
@@ -44,10 +44,13 @@ constructor(
   var selectedServer by mutableStateOf<SmbServer?>(null)
     private set
 
-  var selectedShare by mutableStateOf<String?>(null)
+  var selectedShare by mutableStateOf<SmbEntry?>(null)
     private set
 
   var selectedFile by mutableStateOf<SmbEntry?>(null)
+    private set
+
+  var selectedSeriesTitle by mutableStateOf<String?>(null)
     private set
 
   suspend fun connect(savedServer: SavedServer) =
@@ -79,12 +82,27 @@ constructor(
         }
       }
 
-  fun onShareSelected(share: String) {
+  fun onShareSelected(share: SmbEntry) {
     selectedShare = share
   }
 
   fun onFileSelected(file: SmbEntry) {
     selectedFile = file
+  }
+
+  fun selectFileByPath(path: String, name: String) {
+    val share = selectedShare?.shareName ?: return
+    selectedFile =
+        SmbEntry(
+            name = name,
+            path = path,
+            type = com.silversky.core.model.SmbEntryType.File,
+            shareName = share,
+        )
+  }
+
+  fun onSeriesSelected(title: String) {
+    selectedSeriesTitle = title
   }
 
   fun clearFile() {

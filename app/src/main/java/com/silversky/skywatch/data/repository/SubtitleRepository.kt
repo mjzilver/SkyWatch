@@ -70,7 +70,7 @@ constructor(
           return@withContext null
         }
 
-        val mediaInfo = filenameParser.parse(query)
+        val mediaInfo = filenameParser.parse(query).firstOrNull() ?: return@withContext null
 
         val cachedMedia =
             subtitleDao.getMedia(

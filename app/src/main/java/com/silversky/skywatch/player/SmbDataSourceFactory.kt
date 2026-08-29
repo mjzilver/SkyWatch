@@ -2,8 +2,8 @@ package com.silversky.skywatch.player
 
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
-import com.silversky.core.client.SmbClient
 import com.silversky.core.logger.Logger
+import com.silversky.core.smb.SmbClient
 
 @UnstableApi
 class SmbDataSourceFactory(

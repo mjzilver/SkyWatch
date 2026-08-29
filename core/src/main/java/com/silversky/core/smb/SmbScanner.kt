@@ -1,6 +1,7 @@
 package com.silversky.core.smb
 
 import com.silversky.core.logger.Logger
+import com.silversky.core.model.SmbServer
 import com.silversky.core.utils.NetworkUtils.Companion.resolveHostName
 import java.net.InetSocketAddress
 import java.net.NetworkInterface

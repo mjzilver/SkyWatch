@@ -1,6 +1,8 @@
 package com.silversky.core.parser
 
+import com.silversky.core.model.EpisodeInfo
 import com.silversky.core.model.MediaInfo
+import com.silversky.core.model.MovieInfo
 
 class FilenameParser(
     private val classifier: TokenClassifier,
@@ -25,7 +27,7 @@ class FilenameParser(
           "imax",
       )
 
-  fun parse(filename: String): MediaInfo {
+  fun parse(filename: String, path: String = ""): List<MediaInfo> {
     val tokens =
         filename.split(".", " ", "_", "-").filter { it.isNotBlank() }.map(classifier::classify)
     val seasonEpisode = tokens.filterIsInstance<Token.SeasonEpisode>().firstOrNull()
@@ -77,12 +79,74 @@ class FilenameParser(
               editionKeywords.first { found.contains(it) }
             }
 
-    return MediaInfo(
-        title = title,
-        year = year,
-        season = seasonEpisode?.season,
-        episode = seasonEpisode?.episode,
-        edition = edition,
-    )
+    val season = seasonEpisode?.season
+    val episodes = seasonEpisode?.episodes
+
+    var episodeName: String? = null
+    if (seasonEpisodeIndex != null) {
+      val remainingTokens = tokens.drop(seasonEpisodeIndex + 1)
+      val stopKeywords =
+          listOf(
+              "1080p",
+              "720p",
+              "480p",
+              "x264",
+              "x265",
+              "hevc",
+              "bluray",
+              "webrip",
+              "hdtv",
+              "dts",
+              "ac3",
+              "mkv",
+              "mp4",
+              "avi",
+              "mov",
+              "wmv",
+              "m4v",
+          )
+      val nameTokens = remainingTokens.takeWhile { token ->
+        val text =
+            when (token) {
+              is Token.Text -> token.value.lowercase()
+              is Token.Number -> token.value.toString()
+              else -> ""
+            }
+        !stopKeywords.contains(text) && editionKeywords.none { text.contains(it) }
+      }
+      if (nameTokens.isNotEmpty()) {
+        episodeName =
+            nameTokens.joinToString(" ") {
+              when (it) {
+                is Token.Text -> it.value
+                is Token.Number -> it.value.toString()
+                else -> ""
+              }
+            }
+      }
+    }
+
+    return if (season != null && episodes != null) {
+      episodes.map { episode ->
+        EpisodeInfo(
+            title = title,
+            year = year,
+            season = season,
+            episode = episode,
+            episodeName = episodeName,
+            edition = edition,
+            entryPath = path,
+        )
+      }
+    } else {
+      listOf(
+          MovieInfo(
+              title = title,
+              year = year,
+              edition = edition,
+              entryPath = path,
+          )
+      )
+    }
   }
 }

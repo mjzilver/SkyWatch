@@ -148,7 +148,7 @@ constructor(
 
           override fun onMediaItemTransition(
               mediaItem: androidx.media3.common.MediaItem?,
-              reason: Int
+              reason: Int,
           ) {
             tracksApplied = false
           }
@@ -195,7 +195,7 @@ constructor(
         savedState =
             playbackStateStore.get(
                 client.server!!.ipAddress,
-                share,
+                share.name,
                 smbFile.path,
             )
 
@@ -205,7 +205,7 @@ constructor(
             prepareSmbMediaItem(
                 context = context,
                 smbClient = client,
-                shareName = share,
+                shareName = share.name,
                 path = smbFile.path,
                 logger = logger,
             )
@@ -306,40 +306,39 @@ constructor(
     val smbFile = file ?: return
 
     saveJob?.cancel()
-    saveJob =
-        viewModelScope.launch {
-          val currentPos = player.currentPosition.coerceAtLeast(0L)
-          val totalDuration = player.duration.takeIf { it > 0L } ?: 0L
+    saveJob = viewModelScope.launch {
+      val currentPos = player.currentPosition.coerceAtLeast(0L)
+      val totalDuration = player.duration.takeIf { it > 0L } ?: 0L
 
-          val percent = if (totalDuration > 0) currentPos.toDouble() / totalDuration else 0.0
+      val percent = if (totalDuration > 0) currentPos.toDouble() / totalDuration else 0.0
 
-          val isCompleted = isFinished || percent >= 0.90
-          val shouldReset = isFinished || percent > 0.99
+      val isCompleted = isFinished || percent >= 0.90
+      val shouldReset = isFinished || percent > 0.99
 
-          val finalPosition = if (shouldReset) 0L else currentPos
+      val finalPosition = if (shouldReset) 0L else currentPos
 
-          val subTrack =
-              if (externalSubtitleName != null) {
-                externalSubtitleName
-              } else {
-                getSelectedSubtitleTrackId(player)
-              }
+      val subTrack =
+          if (externalSubtitleName != null) {
+            externalSubtitleName
+          } else {
+            getSelectedSubtitleTrackId(player)
+          }
 
-          playbackStateStore.save(
-              ip = client.server!!.ipAddress,
-              share = share,
-              path = smbFile.path,
-              state =
-                  PlaybackState(
-                      position = finalPosition,
-                      duration = totalDuration,
-                      audioTrack = getSelectedTrackId(player, C.TRACK_TYPE_AUDIO),
-                      subtitleTrack = subTrack,
-                      completed = isCompleted,
-                      subtitleOffset = subtitleOffset,
-                  ),
-          )
-        }
+      playbackStateStore.save(
+          ip = client.server!!.ipAddress,
+          share = share.name,
+          path = smbFile.path,
+          state =
+              PlaybackState(
+                  position = finalPosition,
+                  duration = totalDuration,
+                  audioTrack = getSelectedTrackId(player, C.TRACK_TYPE_AUDIO),
+                  subtitleTrack = subTrack,
+                  completed = isCompleted,
+                  subtitleOffset = subtitleOffset,
+              ),
+      )
+    }
   }
 
   fun togglePlay() {

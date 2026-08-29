@@ -1,4 +1,4 @@
-package com.silversky.core.smb
+package com.silversky.core.model
 
 import com.hierynomus.smbj.share.File
 

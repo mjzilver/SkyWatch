@@ -9,8 +9,9 @@ import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
-import com.silversky.core.client.SmbClient
 import com.silversky.core.logger.Logger
+import com.silversky.core.model.SmbEntryType
+import com.silversky.core.smb.SmbClient
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -57,7 +58,7 @@ suspend fun prepareSmbMediaItem(
                   path = directory,
               )
               .filter { entry ->
-                !entry.isDirectory &&
+                entry.type == SmbEntryType.File &&
                     entry.name.endsWith(
                         ".srt",
                         ignoreCase = true,

@@ -76,7 +76,7 @@ fun ShareScreen(
           shares.forEach { share ->
             Button(
                 onClick = {
-                  viewModel.selectShare(share, { onShareSelected(share) })
+                  viewModel.selectShare(share) { onShareSelected(share.name) }
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -87,7 +87,7 @@ fun ShareScreen(
 
               Spacer(modifier = Modifier.width(12.dp))
 
-              Text(text = share)
+              Text(text = share.name)
             }
           }
         }

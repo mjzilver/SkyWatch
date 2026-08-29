@@ -1,6 +1,6 @@
 package com.silversky.skywatch.model
 
-import com.silversky.core.smb.SmbServer
+import com.silversky.core.model.SmbServer
 import kotlinx.serialization.Serializable
 
 @Serializable

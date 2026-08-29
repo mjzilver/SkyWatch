@@ -6,10 +6,14 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.silversky.core.logger.Logger
-import com.silversky.core.smb.SmbEntry
+import com.silversky.core.model.MediaInfo
+import com.silversky.core.model.MovieInfo
+import com.silversky.core.model.SmbEntry
+import com.silversky.core.model.SmbEntryType
 import com.silversky.skywatch.data.local.PlaybackState
 import com.silversky.skywatch.data.local.PlaybackStateStore
 import com.silversky.skywatch.data.remote.SmbConnectionManager
+import com.silversky.skywatch.data.repository.MediaRepository
 import com.silversky.skywatch.data.repository.SettingsRepository
 import com.silversky.skywatch.model.SortBy
 import com.silversky.skywatch.model.SortOrder
@@ -19,15 +23,33 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+enum class BrowserTab {
+  Folders,
+  Media,
+}
+
 @HiltViewModel
 class FileBrowserViewModel
 @Inject
 constructor(
     private val connectionManager: SmbConnectionManager,
     private val settingsRepository: SettingsRepository,
+    private val mediaRepository: MediaRepository,
     val playbackStateStore: PlaybackStateStore,
     private val logger: Logger,
 ) : ViewModel() {
+
+  var selectedTab by mutableStateOf(BrowserTab.Folders)
+    private set
+
+  var mediaItems by mutableStateOf<List<MediaInfo>>(emptyList())
+    private set
+
+  var movieVersionsToPick by mutableStateOf<List<MovieInfo>?>(null)
+    private set
+
+  var isScanning by mutableStateOf(false)
+    private set
 
   var currentPath by mutableStateOf("")
     private set
@@ -51,7 +73,7 @@ constructor(
     get() = connectionManager.selectedServer
 
   val shareName
-    get() = connectionManager.selectedShare
+    get() = connectionManager.selectedShare?.shareName
 
   private var rawEntries: List<SmbEntry> = emptyList()
 
@@ -76,7 +98,7 @@ constructor(
 
         val resumeMap =
             result
-                .filter { !it.isDirectory }
+                .filter { it.type == SmbEntryType.File }
                 .mapNotNull { entry ->
                   val progress =
                       playbackStateStore.get(
@@ -120,25 +142,47 @@ constructor(
 
   private fun applySorting() {
     val settings = settingsRepository.settings.value
+
     val sortedResult = rawEntries.sortedWith { a, b ->
-      if (settings.foldersFirst && a.isDirectory != b.isDirectory) {
-        if (a.isDirectory) -1 else 1
+      if (settings.foldersFirst && a.type != b.type) {
+        if (a.type == SmbEntryType.Directory) -1 else 1
       } else {
         val comparison =
             when (settings.sortBy) {
               SortBy.Name -> a.name.compareTo(b.name, ignoreCase = true)
+
               SortBy.DateModified -> a.dateModified.compareTo(b.dateModified)
+
               SortBy.Size -> a.size.compareTo(b.size)
             }
-        if (settings.sortOrder == SortOrder.Ascending) comparison else -comparison
+
+        if (settings.sortOrder == SortOrder.Ascending) {
+          comparison
+        } else {
+          -comparison
+        }
       }
     }
+
     entries = sortedResult
   }
 
   fun selectFile(file: SmbEntry, onFileSelected: (SmbEntry) -> Unit) {
     connectionManager.onFileSelected(file)
     onFileSelected(file)
+  }
+
+  fun startSeriesSelection(title: String, onSeriesSelected: () -> Unit) {
+    connectionManager.onSeriesSelected(title)
+    onSeriesSelected()
+  }
+
+  fun pickMovieVersion(versions: List<MovieInfo>) {
+    movieVersionsToPick = versions
+  }
+
+  fun dismissMovieVersionPicker() {
+    movieVersionsToPick = null
   }
 
   fun navigateTo(path: String) {
@@ -160,5 +204,75 @@ constructor(
     val normalized = path.trimEnd('\\')
     val index = normalized.lastIndexOf('\\')
     return if (index < 0) "" else normalized.substring(0, index)
+  }
+
+  fun selectTab(tab: BrowserTab) {
+    selectedTab = tab
+    if (tab == BrowserTab.Media) {
+      loadMedia()
+    }
+  }
+
+  fun loadMedia() {
+    val serverIp = server?.ipAddress ?: return
+    val share = shareName ?: return
+
+    viewModelScope.launch {
+      val cached = mediaRepository.getMediaForShare(serverIp, share)
+      mediaItems = applyMediaSorting(cached)
+      startScan()
+    }
+  }
+
+  fun startScan() {
+    val client = client ?: return
+    val serverIp = server?.ipAddress ?: return
+    val share = shareName ?: return
+
+    if (isScanning) return
+
+    viewModelScope.launch {
+      isScanning = true
+      try {
+        val result = mediaRepository.scanAndSave(client, serverIp, share)
+        mediaItems = applyMediaSorting(result)
+      } catch (e: Exception) {
+        logger.error("Failed to scan media", e)
+      } finally {
+        isScanning = false
+      }
+    }
+  }
+
+  private fun applyMediaSorting(items: List<MediaInfo>): List<MediaInfo> {
+    val settings = settingsRepository.settings.value
+
+    return items.sortedWith { a, b ->
+      if (settings.mediaPriority != com.silversky.skywatch.model.MediaPriority.None) {
+        val aIsMovie = a is MovieInfo
+        val bIsMovie = b is MovieInfo
+        if (aIsMovie != bIsMovie) {
+          return@sortedWith if (
+              settings.mediaPriority == com.silversky.skywatch.model.MediaPriority.MoviesFirst
+          ) {
+            if (aIsMovie) -1 else 1
+          } else {
+            if (aIsMovie) 1 else -1
+          }
+        }
+      }
+
+      val comparison =
+          when (settings.sortBy) {
+            SortBy.Name -> a.title.compareTo(b.title, ignoreCase = true)
+            else -> 0
+          }
+
+      if (settings.sortOrder == SortOrder.Ascending) {
+        comparison
+      } else {
+        -comparison
+      }
+    }
   }
 }
