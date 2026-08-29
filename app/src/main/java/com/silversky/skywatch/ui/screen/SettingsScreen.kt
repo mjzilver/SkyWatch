@@ -103,32 +103,6 @@ fun SettingsScreen(
           )
           Text(text = "Folders first", style = MaterialTheme.typography.bodyLarge)
         }
-
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          Text(text = "Media Library Priority", style = MaterialTheme.typography.labelLarge)
-          Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            val priorities = com.silversky.skywatch.model.MediaPriority.entries
-            priorities.forEach { priority ->
-              Button(
-                  onClick = { viewModel.updateMediaPriority(priority) },
-                  modifier = Modifier.width(160.dp),
-              ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                  RadioButton(selected = settings.mediaPriority == priority, onClick = null)
-                  Spacer(modifier = Modifier.width(8.dp))
-                  Text(
-                      text =
-                          when (priority) {
-                            com.silversky.skywatch.model.MediaPriority.MoviesFirst -> "Movies first"
-                            com.silversky.skywatch.model.MediaPriority.SeriesFirst -> "Series first"
-                            com.silversky.skywatch.model.MediaPriority.None -> "None"
-                          }
-                  )
-                }
-              }
-            }
-          }
-        }
       }
     }
 

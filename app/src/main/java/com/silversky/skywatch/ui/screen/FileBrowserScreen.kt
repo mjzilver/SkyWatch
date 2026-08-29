@@ -31,6 +31,7 @@ import androidx.tv.material3.Tab
 import androidx.tv.material3.TabRow
 import androidx.tv.material3.Text
 import com.silversky.core.model.EpisodeInfo
+import com.silversky.core.model.MediaInfo
 import com.silversky.core.model.MovieInfo
 import com.silversky.core.model.SmbEntry
 import com.silversky.core.model.SmbEntryType
@@ -100,60 +101,111 @@ fun FileBrowserScreen(
 
     Spacer(modifier = Modifier.height(16.dp))
 
-    if (viewModel.selectedTab == BrowserTab.Folders) {
-      when {
-        loading -> {
-          LoadingMessage()
-        }
+    when (viewModel.selectedTab) {
+      BrowserTab.Folders -> {
+        when {
+          loading -> {
+            LoadingMessage()
+          }
 
-        error != null -> {
-          ErrorMessage(error)
-        }
+          error != null -> {
+            ErrorMessage(error)
+          }
 
-        entries.isEmpty() -> {
-          EmptyMessage("This folder is empty.")
-        }
+          entries.isEmpty() -> {
+            EmptyMessage("This folder is empty.")
+          }
 
-        else -> {
-          LazyColumn(
-              modifier = Modifier.fillMaxWidth(),
-              verticalArrangement = Arrangement.spacedBy(8.dp),
-          ) {
-            items(
-                items = entries,
-                key = { entry -> entry.path },
-            ) { entry ->
-              val progress = resumeEntries[entry.path]
+          else -> {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+              items(
+                  items = entries,
+                  key = { entry -> entry.path },
+              ) { entry ->
+                val progress = resumeEntries[entry.path]
 
-              val hasFinished =
-                  progress != null &&
-                      (progress.completed ||
-                          (progress.duration > 0 && progress.position >= progress.duration * 0.90))
+                val hasFinished =
+                    progress != null &&
+                        (progress.completed ||
+                            (progress.duration > 0 && progress.position >= progress.duration * 0.90))
 
-              val hasResumePosition = progress != null && !hasFinished
+                val hasResumePosition = progress != null && !hasFinished
 
-              FileEntryButton(
-                  entry = entry,
-                  hasResumePosition = hasResumePosition,
-                  hasFinished = hasFinished,
-                  onClick = {
-                    if (entry.type == SmbEntryType.Directory) {
-                      viewModel.navigateTo(entry.path)
-                    } else {
-                      viewModel.selectFile(entry, onFileSelected)
-                    }
-                  },
-              )
+                FileEntryButton(
+                    entry = entry,
+                    hasResumePosition = hasResumePosition,
+                    hasFinished = hasFinished,
+                    onClick = {
+                      if (entry.type == SmbEntryType.Directory) {
+                        viewModel.navigateTo(entry.path)
+                      } else {
+                        viewModel.selectFile(entry, onFileSelected)
+                      }
+                    },
+                )
+              }
             }
           }
         }
       }
-    } else {
-      MediaList(
-          viewModel = viewModel,
-          onMovieSelected = onFileSelected,
-          onSeriesSelected = onSeriesSelected,
-      )
+
+      BrowserTab.Movies -> {
+        val movies = viewModel.mediaItems.filterIsInstance<MovieInfo>()
+        MediaList(
+            mediaItems = movies,
+            isScanning = viewModel.isScanning,
+            title = { it.title },
+            year = { it.year },
+            onClick = { movie ->
+              val versions = movies.filter { it.title == movie.title && it.year == movie.year }
+              if (versions.size == 1) {
+                viewModel.selectFile(
+                    SmbEntry(
+                        name = movie.title,
+                        path = movie.entryPath,
+                        type = SmbEntryType.File,
+                        shareName = viewModel.shareName ?: "",
+                    ),
+                    onFileSelected,
+                )
+              } else {
+                viewModel.pickMovieVersion(versions)
+              }
+            },
+            trailingContent = { items ->
+              if (items.size > 1) {
+                Text(
+                    text = "${items.size} versions",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+              }
+            },
+        )
+      }
+
+      BrowserTab.Series -> {
+        MediaList(
+            mediaItems = viewModel.mediaItems.filterIsInstance<EpisodeInfo>(),
+            isScanning = viewModel.isScanning,
+            title = { it.title },
+            year = { it.year },
+            onClick = { episode ->
+              viewModel.startSeriesSelection(episode.title, onSeriesSelected)
+            },
+            trailingContent = { items ->
+              val seasonCount = items.distinctBy { it.season }.size
+              Text(
+                  text = "$seasonCount seasons",
+                  style = MaterialTheme.typography.labelSmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+              )
+            },
+        )
+      }
     }
 
     viewModel.movieVersionsToPick?.let { versions ->
@@ -180,14 +232,14 @@ fun FileBrowserScreen(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun MediaList(
-    viewModel: FileBrowserViewModel,
-    onMovieSelected: () -> Unit,
-    onSeriesSelected: () -> Unit,
+private fun <T : MediaInfo> MediaList(
+    mediaItems: List<T>,
+    isScanning: Boolean,
+    title: (T) -> String,
+    year: (T) -> Int?,
+    onClick: (T) -> Unit,
+    trailingContent: @Composable (List<T>) -> Unit = {},
 ) {
-  val mediaItems = viewModel.mediaItems
-  val isScanning = viewModel.isScanning
-
   if (mediaItems.isEmpty() && isScanning) {
     LoadingMessage("Scanning media...")
     return
@@ -198,7 +250,7 @@ private fun MediaList(
     return
   }
 
-  val grouped = mediaItems.groupBy { it.title to it.year }
+  val grouped = mediaItems.groupBy { title(it) to year(it) }
   val keys = remember(grouped) { grouped.keys.toList() }
 
   LazyColumn(
@@ -208,63 +260,29 @@ private fun MediaList(
     items(
         items = keys,
         key = { "${it.first}_${it.second}" },
-    ) { (title, year) ->
-      val itemsForGroup = grouped[title to year] ?: emptyList()
-      val first = itemsForGroup.first()
+    ) { (groupTitle, groupYear) ->
+      val itemsForGroup = grouped[groupTitle to groupYear] ?: emptyList()
 
       Button(
-          onClick = {
-            when (first) {
-              is MovieInfo -> {
-                if (itemsForGroup.size == 1) {
-                  viewModel.selectFile(
-                      SmbEntry(
-                          name = first.title,
-                          path = first.entryPath,
-                          type = SmbEntryType.File,
-                          shareName = viewModel.shareName ?: "",
-                      ),
-                      onMovieSelected,
-                  )
-                } else {
-                  viewModel.pickMovieVersion(itemsForGroup.filterIsInstance<MovieInfo>())
-                }
-              }
-              is EpisodeInfo -> {
-                viewModel.startSeriesSelection(title, onSeriesSelected)
-              }
-            }
-          },
+          onClick = { onClick(itemsForGroup.first()) },
           modifier = Modifier.fillMaxWidth(),
       ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-          Text(text = if (year != null) "$title ($year)" else title)
+          Text(
+              text =
+                  if (groupYear != null) {
+                    "$groupTitle ($groupYear)"
+                  } else {
+                    groupTitle
+                  },
+          )
 
           Spacer(modifier = Modifier.weight(1f))
 
-          when (first) {
-            is MovieInfo -> {
-              if (itemsForGroup.size > 1) {
-                Text(
-                    text = "${itemsForGroup.size} versions",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-              }
-            }
-            is EpisodeInfo -> {
-              val episodes = itemsForGroup.filterIsInstance<EpisodeInfo>()
-              val seasonCount = episodes.distinctBy { it.season }.size
-              Text(
-                  text = "$seasonCount seasons",
-                  style = MaterialTheme.typography.labelSmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
-              )
-            }
-          }
+          trailingContent(itemsForGroup)
         }
       }
     }

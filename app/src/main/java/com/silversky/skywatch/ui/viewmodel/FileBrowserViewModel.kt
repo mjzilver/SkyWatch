@@ -25,7 +25,8 @@ import kotlinx.coroutines.withContext
 
 enum class BrowserTab {
   Folders,
-  Media,
+  Movies,
+  Series,
 }
 
 @HiltViewModel
@@ -208,7 +209,7 @@ constructor(
 
   fun selectTab(tab: BrowserTab) {
     selectedTab = tab
-    if (tab == BrowserTab.Media) {
+    if (tab == BrowserTab.Movies || tab == BrowserTab.Series) {
       loadMedia()
     }
   }
@@ -248,20 +249,6 @@ constructor(
     val settings = settingsRepository.settings.value
 
     return items.sortedWith { a, b ->
-      if (settings.mediaPriority != com.silversky.skywatch.model.MediaPriority.None) {
-        val aIsMovie = a is MovieInfo
-        val bIsMovie = b is MovieInfo
-        if (aIsMovie != bIsMovie) {
-          return@sortedWith if (
-              settings.mediaPriority == com.silversky.skywatch.model.MediaPriority.MoviesFirst
-          ) {
-            if (aIsMovie) -1 else 1
-          } else {
-            if (aIsMovie) 1 else -1
-          }
-        }
-      }
-
       val comparison =
           when (settings.sortBy) {
             SortBy.Name -> a.title.compareTo(b.title, ignoreCase = true)
