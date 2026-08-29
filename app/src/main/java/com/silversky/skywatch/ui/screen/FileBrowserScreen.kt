@@ -210,26 +210,29 @@ private fun MediaList(
         key = { "${it.first}_${it.second}" },
     ) { (title, year) ->
       val itemsForGroup = grouped[title to year] ?: emptyList()
-      val episodes = itemsForGroup.filterIsInstance<EpisodeInfo>()
-      val movies = itemsForGroup.filterIsInstance<MovieInfo>()
+      val first = itemsForGroup.first()
 
       Button(
           onClick = {
-            if (episodes.isNotEmpty()) {
-              viewModel.startSeriesSelection(title, onSeriesSelected)
-            } else if (movies.size == 1) {
-              val first = movies.first()
-              viewModel.selectFile(
-                  SmbEntry(
-                      name = first.title,
-                      path = first.entryPath,
-                      type = SmbEntryType.File,
-                      shareName = viewModel.shareName ?: "",
-                  ),
-                  onMovieSelected,
-              )
-            } else if (movies.size > 1) {
-              viewModel.pickMovieVersion(movies)
+            when (first) {
+              is MovieInfo -> {
+                if (itemsForGroup.size == 1) {
+                  viewModel.selectFile(
+                      SmbEntry(
+                          name = first.title,
+                          path = first.entryPath,
+                          type = SmbEntryType.File,
+                          shareName = viewModel.shareName ?: "",
+                      ),
+                      onMovieSelected,
+                  )
+                } else {
+                  viewModel.pickMovieVersion(itemsForGroup.filterIsInstance<MovieInfo>())
+                }
+              }
+              is EpisodeInfo -> {
+                viewModel.startSeriesSelection(title, onSeriesSelected)
+              }
             }
           },
           modifier = Modifier.fillMaxWidth(),
@@ -242,19 +245,25 @@ private fun MediaList(
 
           Spacer(modifier = Modifier.weight(1f))
 
-          if (movies.size > 1) {
-            Text(
-                text = "${movies.size} versions",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-          } else if (episodes.isNotEmpty()) {
-            val seasonCount = episodes.distinctBy { it.season }.size
-            Text(
-                text = "$seasonCount seasons",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+          when (first) {
+            is MovieInfo -> {
+              if (itemsForGroup.size > 1) {
+                Text(
+                    text = "${itemsForGroup.size} versions",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+              }
+            }
+            is EpisodeInfo -> {
+              val episodes = itemsForGroup.filterIsInstance<EpisodeInfo>()
+              val seasonCount = episodes.distinctBy { it.season }.size
+              Text(
+                  text = "$seasonCount seasons",
+                  style = MaterialTheme.typography.labelSmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+              )
+            }
           }
         }
       }

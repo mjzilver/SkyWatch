@@ -54,18 +54,36 @@ constructor(
         val media = scanner.scan(shareName)
 
         val entities = media.map { info ->
-          ScannedMediaEntity(
-              serverIp = serverIp,
-              shareName = shareName,
-              entryPath = info.entryPath,
-              title = info.title,
-              year = info.year,
-              edition = info.edition,
-              season = info.season,
-              episode = info.episode,
-              episodeName = info.episodeName,
-              isMovie = info is MovieInfo,
-          )
+          when (info) {
+            is MovieInfo -> {
+              ScannedMediaEntity(
+                  serverIp = serverIp,
+                  shareName = shareName,
+                  entryPath = info.entryPath,
+                  title = info.title,
+                  year = info.year,
+                  edition = info.edition,
+                  season = null,
+                  episode = null,
+                  episodeName = null,
+                  isMovie = true,
+              )
+            }
+            is EpisodeInfo -> {
+              ScannedMediaEntity(
+                  serverIp = serverIp,
+                  shareName = shareName,
+                  entryPath = info.entryPath,
+                  title = info.title,
+                  year = info.year,
+                  edition = info.edition,
+                  season = info.season,
+                  episode = info.episode,
+                  episodeName = info.episodeName,
+                  isMovie = false,
+              )
+            }
+          }
         }
 
         scannedMediaDao.deleteForShare(serverIp, shareName)

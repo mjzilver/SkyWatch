@@ -2,6 +2,8 @@ package com.silversky.skywatch.data.repository
 
 import android.content.Context
 import com.silversky.core.logger.Logger
+import com.silversky.core.model.EpisodeInfo
+import com.silversky.core.model.MovieInfo
 import com.silversky.core.parser.FilenameParser
 import com.silversky.skywatch.config.ConfigLoader
 import com.silversky.skywatch.data.local.db.MediaEntity
@@ -72,12 +74,25 @@ constructor(
 
         val mediaInfo = filenameParser.parse(query).firstOrNull() ?: return@withContext null
 
+        val season: Int?
+        val episode: Int?
+        when (mediaInfo) {
+          is EpisodeInfo -> {
+            season = mediaInfo.season
+            episode = mediaInfo.episode
+          }
+          is MovieInfo -> {
+            season = null
+            episode = null
+          }
+        }
+
         val cachedMedia =
             subtitleDao.getMedia(
                 mediaInfo.title,
                 mediaInfo.year,
-                mediaInfo.season,
-                mediaInfo.episode,
+                season,
+                episode,
                 mediaInfo.edition,
             )
 
@@ -117,13 +132,26 @@ constructor(
           val mediaId =
               cachedMedia?.id
                   ?: UUID.randomUUID().toString().also { id ->
+                    val season: Int?
+                    val episode: Int?
+                    when (mediaInfo) {
+                      is EpisodeInfo -> {
+                        season = mediaInfo.season
+                        episode = mediaInfo.episode
+                      }
+                      is MovieInfo -> {
+                        season = null
+                        episode = null
+                      }
+                    }
+
                     subtitleDao.insertMedia(
                         MediaEntity(
                             id = id,
                             title = mediaInfo.title,
                             year = mediaInfo.year,
-                            season = mediaInfo.season,
-                            episode = mediaInfo.episode,
+                            season = season,
+                            episode = episode,
                             edition = mediaInfo.edition,
                         )
                     )
@@ -142,11 +170,25 @@ constructor(
           }
 
           val finalSubtitles = subtitleDao.getSubtitlesForMedia(mediaId)
+
+          val season: Int?
+          val episode: Int?
+          when (mediaInfo) {
+            is EpisodeInfo -> {
+              season = mediaInfo.season
+              episode = mediaInfo.episode
+            }
+            is MovieInfo -> {
+              season = null
+              episode = null
+            }
+          }
+
           return@withContext SubtitleSearchResult(
               title = mediaInfo.title,
               year = mediaInfo.year,
-              season = mediaInfo.season,
-              episode = mediaInfo.episode,
+              season = season,
+              episode = episode,
               edition = mediaInfo.edition,
               subtitles = finalSubtitles.map { SubtitleResult(it.id, it.name) },
           )

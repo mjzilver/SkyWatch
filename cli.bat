@@ -1,1 +1,0 @@
-./gradlew :cli:run --console=plain

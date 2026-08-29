@@ -1,1 +1,0 @@
-./gradlew :subtitle-server:run --console=plain

@@ -22,11 +22,11 @@ if (-not (Test-Path $JarPath)) {
     }
 
     Write-Host "Downloading ktfmt $($release.tag_name)..."
+
     Invoke-WebRequest `
         -Uri $asset.browser_download_url `
         -OutFile $JarPath
 }
-
 
 & java -jar $JarPath @KtfmtArgs
 

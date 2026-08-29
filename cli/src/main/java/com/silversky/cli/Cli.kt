@@ -257,18 +257,25 @@ class Cli(private val logger: Logger) {
           val year = first.year?.let { " ($it)" } ?: ""
           val edition = first.edition?.let { " [$it]" } ?: ""
 
-          if (items.size == 1 && first is MovieInfo) {
-            println("MOVIE: $title$year$edition")
-          } else {
-            println("SERIES: $title$year")
-            items
-                .filterIsInstance<EpisodeInfo>()
-                .sortedWith(compareBy({ it.season }, { it.episode }))
-                .forEach { ep ->
-                  println(
-                      "  S${ep.season.toString().padStart(2, '0')}E${ep.episode.toString().padStart(2, '0')} - ${ep.entryPath}"
-                  )
-                }
+          when (first) {
+            is MovieInfo -> {
+              if (items.size == 1) {
+                println("MOVIE: $title$year$edition")
+              } else {
+                println("MOVIE: $title$year (${items.size} versions)")
+              }
+            }
+            is EpisodeInfo -> {
+              println("SERIES: $title$year")
+              items
+                  .filterIsInstance<EpisodeInfo>()
+                  .sortedWith(compareBy({ it.season }, { it.episode }))
+                  .forEach { ep ->
+                    println(
+                        "  S${ep.season.toString().padStart(2, '0')}E${ep.episode.toString().padStart(2, '0')} - ${ep.entryPath}"
+                    )
+                  }
+            }
           }
         }
   }

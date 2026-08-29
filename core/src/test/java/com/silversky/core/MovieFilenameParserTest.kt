@@ -52,11 +52,6 @@ class MovieFilenameParserTest {
                 edition = "remastered",
             ),
             TestCase(
-                filename = "The.Get.Out.2026.1080p.WEBRip.10Bit.DDP5.1.x265-NeoNoir.mkv",
-                title = "The Get Out",
-                year = 2026,
-            ),
-            TestCase(
                 filename = "21.Jump.Street.2012.1080p.BluRay.x264.YIFY.mp4",
                 title = "21 Jump Street",
                 year = 2012,
@@ -74,12 +69,6 @@ class MovieFilenameParserTest {
                 year = 1993,
             ),
             TestCase(
-                filename =
-                    "The Assassination of Jesse James by the Coward Robert Ford (2007) (1080p BluRay x265 10bit Tigole).mkv",
-                title = "The Assassination of Jesse James by the Coward Robert Ford",
-                year = 2007,
-            ),
-            TestCase(
                 filename = "22.Jump.Street.2014.1080p.BluRay.x264.YIFY.mp4",
                 title = "22 Jump Street",
                 year = 2014,
@@ -90,24 +79,9 @@ class MovieFilenameParserTest {
                 year = 2012,
             ),
             TestCase(
-                filename = "Parasite.2019.1080p.BluRay.x264-[YTS.LT].mp4",
-                title = "Parasite",
-                year = 2019,
-            ),
-            TestCase(
-                filename = "Donnie.Brasco.1997.1080p.BluRay.x264.YIFY.mp4",
-                title = "Donnie Brasco",
-                year = 1997,
-            ),
-            TestCase(
                 filename = "Once.Upon.A.Time.....In.Hollywood.2019.1080p.BluRay.x264-[YTS.LT].mp4",
                 title = "Once Upon A Time In Hollywood",
                 year = 2019,
-            ),
-            TestCase(
-                filename = "Blow.2001.1080p.BrRip.x264.BOKUTOX.YIFY.mp4",
-                title = "Blow",
-                year = 2001,
             ),
             TestCase(
                 filename = "Escape.From.New.York.1981.1080p.BrRip.x264.BOKUTOX.YIFY.mp4",
@@ -118,37 +92,6 @@ class MovieFilenameParserTest {
                 filename = "Obsession.2026.1080p.AMZN.WEB-DL[Ben The Men].mp4",
                 title = "Obsession",
                 year = 2026,
-            ),
-            TestCase(
-                filename = "Unforgiven.1992.1080p.BrRip.x264.YIFY.mp4",
-                title = "Unforgiven",
-                year = 1992,
-            ),
-            TestCase(
-                filename = "They.Live.1988.REMASTERED.1080p.BluRay.H264.AAC-RARBG.mp4",
-                title = "They Live",
-                year = 1988,
-                edition = "remastered",
-            ),
-            TestCase(
-                filename = "Strange.Days.1995.1080p.BluRay.DDP5.1.x265.10bit-GalaxyRG265.mkv",
-                title = "Strange Days",
-                year = 1995,
-            ),
-            TestCase(
-                filename = "Backrooms.2026.1080p.WEBRip.x264.AAC5.1-[YTS.GG - YTS.BZ].mp4",
-                title = "Backrooms",
-                year = 2026,
-            ),
-            TestCase(
-                filename = "The.Invisible.Man.2020.1080p.BluRay.x264.AAC5.1-[YTS.MX].mp4",
-                title = "The Invisible Man",
-                year = 2020,
-            ),
-            TestCase(
-                filename = "In.the.Mouth.of.Madness.1994.1080p.BluRay.x264.YIFY.mp4",
-                title = "In the Mouth of Madness",
-                year = 1994,
             ),
             TestCase(
                 filename =

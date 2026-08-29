@@ -64,7 +64,7 @@ object AppModule {
   @Singleton
   fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
       Room.databaseBuilder(context, AppDatabase::class.java, "skywatch.db")
-          .fallbackToDestructiveMigration()
+          .fallbackToDestructiveMigration(true)
           .build()
 
   @Provides fun provideSubtitleDao(database: AppDatabase): SubtitleDao = database.subtitleDao()
