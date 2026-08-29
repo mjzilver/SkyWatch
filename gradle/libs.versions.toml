@@ -1,5 +1,6 @@
 [versions]
 agp = "9.3.2"
+bcprovJdk18on = "1.85.2"
 coreKtx = "1.19.0"
 appcompat = "1.8.0"
 datastorePreferences = "1.2.1"
@@ -46,6 +47,7 @@ androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecyc
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
+bcprov-jdk18on = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bcprovJdk18on" }
 dcerpc = { module = "com.rapid7.client:dcerpc", version.ref = "dcerpc" }
 jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }

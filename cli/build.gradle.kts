@@ -24,5 +24,5 @@ tasks.named<JavaExec>("run") {
 
 dependencies {
   implementation(project(":core"))
-  implementation("org.bouncycastle:bcprov-jdk18on:1.85")
+  implementation(libs.bcprov.jdk18on)
 }

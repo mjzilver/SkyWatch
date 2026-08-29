@@ -11,7 +11,6 @@ object SubtitleParser {
       logger?.error("No suitable parser found for subtitle content")
       return emptyList()
     }
-    logger?.debug("Using ${parser::class.simpleName}")
     return parser.parse(content, logger)
   }
 }

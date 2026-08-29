@@ -55,28 +55,6 @@ internal fun AudioTrackDialog(
   )
 }
 
-@Composable
-internal fun SubtitleTrackDialog(
-    player: ExoPlayer,
-    onDismiss: () -> Unit,
-) {
-  val tracks =
-      remember(player.currentTracks) {
-        player.currentTracks.groups.filter {
-          it.type == C.TRACK_TYPE_TEXT
-        }
-      }
-
-  TrackDialog(
-      title = "Subtitles",
-      tracks = tracks,
-      player = player,
-      trackType = C.TRACK_TYPE_TEXT,
-      allowOff = true,
-      onDismiss = onDismiss,
-  )
-}
-
 @OptIn(UnstableApi::class)
 @Composable
 internal fun TrackDialog(

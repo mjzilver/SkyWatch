@@ -7,12 +7,12 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.silversky.skywatch.ui.component.ScanDialog
-import com.silversky.skywatch.ui.component.ServerDialog
-import com.silversky.skywatch.ui.component.SkyWatchDialog
 import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.silversky.skywatch.ui.component.ScanDialog
+import com.silversky.skywatch.ui.component.ServerDialog
+import com.silversky.skywatch.ui.component.SkyWatchDialog
 import com.silversky.skywatch.ui.screen.FileBrowserScreen
 import com.silversky.skywatch.ui.screen.HomeScreen
 import com.silversky.skywatch.ui.screen.PlayerScreen
@@ -89,10 +89,11 @@ fun SkyWatchApp() {
                   Button(onClick = { viewModel.dismissDialog() }) {
                     Text("Cancel")
                   }
-                }
+                },
             ) {
               Text(
-                  text = "Are you sure you want to delete '${dialog.server.server.name ?: dialog.server.server.ipAddress}'?",
+                  text =
+                      "Are you sure you want to delete '${dialog.server.server.name ?: dialog.server.server.ipAddress}'?",
                   style = MaterialTheme.typography.bodyLarge,
                   color = Color.White,
               )

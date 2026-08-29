@@ -7,11 +7,9 @@ import com.silversky.core.logger.Logger
 import com.silversky.core.model.SmbEntry
 import com.silversky.core.model.SmbServer
 import com.silversky.core.smb.SmbClient
-import com.silversky.skywatch.di.ApplicationScope
 import com.silversky.skywatch.model.SavedServer
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,7 +31,6 @@ class SmbConnectionManager
 @Inject
 constructor(
     private val logger: Logger,
-    @param:ApplicationScope private val applicationScope: CoroutineScope,
 ) {
   private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
   val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()

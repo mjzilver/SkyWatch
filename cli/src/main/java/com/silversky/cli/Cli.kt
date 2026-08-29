@@ -221,7 +221,7 @@ class Cli(private val logger: Logger) {
     println("$prefix└── $label")
 
     entry.children.forEach { child ->
-      printEntry(child, prefix + "    ")
+      printEntry(child, "$prefix    ")
     }
   }
 

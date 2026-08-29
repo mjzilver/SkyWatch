@@ -39,7 +39,7 @@ constructor(
 
   fun loadShares() {
     val client = client ?: return
-    val server = server ?: return
+    server ?: return
 
     loading = true
     error = null
