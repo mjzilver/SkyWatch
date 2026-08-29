@@ -29,7 +29,7 @@ import com.silversky.skywatch.ui.viewmodel.SharesViewModel
 @Composable
 fun ShareScreen(
     viewModel: SharesViewModel,
-    onShareSelected: (String) -> Unit,
+    onShareSelected: () -> Unit,
     onBack: () -> Unit,
 ) {
   val shares = viewModel.shares
@@ -76,7 +76,7 @@ fun ShareScreen(
           shares.forEach { share ->
             Button(
                 onClick = {
-                  viewModel.selectShare(share) { onShareSelected(share.name) }
+                  viewModel.selectShare(share) { onShareSelected() }
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {

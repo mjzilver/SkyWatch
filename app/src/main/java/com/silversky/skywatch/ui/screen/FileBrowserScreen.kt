@@ -46,7 +46,7 @@ import com.silversky.skywatch.ui.viewmodel.FileBrowserViewModel
 @Composable
 fun FileBrowserScreen(
     viewModel: FileBrowserViewModel,
-    onFileSelected: (SmbEntry) -> Unit,
+    onFileSelected: () -> Unit,
     onSeriesSelected: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -182,7 +182,7 @@ fun FileBrowserScreen(
 @Composable
 private fun MediaList(
     viewModel: FileBrowserViewModel,
-    onMovieSelected: (SmbEntry) -> Unit,
+    onMovieSelected: () -> Unit,
     onSeriesSelected: () -> Unit,
 ) {
   val mediaItems = viewModel.mediaItems

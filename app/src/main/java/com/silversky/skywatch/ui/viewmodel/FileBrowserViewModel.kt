@@ -167,9 +167,9 @@ constructor(
     entries = sortedResult
   }
 
-  fun selectFile(file: SmbEntry, onFileSelected: (SmbEntry) -> Unit) {
+  fun selectFile(file: SmbEntry, onFileSelected: () -> Unit) {
     connectionManager.onFileSelected(file)
-    onFileSelected(file)
+    onFileSelected()
   }
 
   fun startSeriesSelection(title: String, onSeriesSelected: () -> Unit) {

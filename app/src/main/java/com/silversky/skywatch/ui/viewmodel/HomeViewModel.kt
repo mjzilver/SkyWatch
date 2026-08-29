@@ -26,6 +26,8 @@ sealed interface DialogState {
       val scannedName: String = "",
   ) : DialogState
 
+  data class DeleteConfirmation(val server: SavedServer) : DialogState
+
   data object Scan : DialogState
 }
 
@@ -77,9 +79,14 @@ constructor(
     }
   }
 
-  fun deleteServer(server: SavedServer) {
+  fun confirmDelete(server: SavedServer) {
+    dialog = DialogState.DeleteConfirmation(server)
+  }
+
+  fun performDelete(server: SavedServer) {
     viewModelScope.launch {
       repository.deleteServer(server.server.ipAddress)
+      dismissDialog()
     }
   }
 }

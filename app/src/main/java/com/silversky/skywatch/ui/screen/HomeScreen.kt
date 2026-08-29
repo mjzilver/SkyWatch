@@ -124,7 +124,7 @@ fun HomeScreen(
 
               Button(
                   onClick = {
-                    viewModel.deleteServer(server)
+                    viewModel.confirmDelete(server)
                   },
                   modifier = Modifier.width(80.dp),
               ) {

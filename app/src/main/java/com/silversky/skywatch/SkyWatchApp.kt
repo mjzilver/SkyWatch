@@ -2,12 +2,17 @@ package com.silversky.skywatch
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.Color
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.silversky.skywatch.ui.component.ScanDialog
 import com.silversky.skywatch.ui.component.ServerDialog
+import com.silversky.skywatch.ui.component.SkyWatchDialog
+import androidx.tv.material3.Button
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
 import com.silversky.skywatch.ui.screen.FileBrowserScreen
 import com.silversky.skywatch.ui.screen.HomeScreen
 import com.silversky.skywatch.ui.screen.PlayerScreen
@@ -73,6 +78,26 @@ fun SkyWatchApp() {
                 isEditing = server != null,
             )
           }
+          is DialogState.DeleteConfirmation -> {
+            SkyWatchDialog(
+                title = "Delete Server",
+                onDismiss = { viewModel.dismissDialog() },
+                buttons = {
+                  Button(onClick = { viewModel.performDelete(dialog.server) }) {
+                    Text("Delete")
+                  }
+                  Button(onClick = { viewModel.dismissDialog() }) {
+                    Text("Cancel")
+                  }
+                }
+            ) {
+              Text(
+                  text = "Are you sure you want to delete '${dialog.server.server.name ?: dialog.server.server.ipAddress}'?",
+                  style = MaterialTheme.typography.bodyLarge,
+                  color = Color.White,
+              )
+            }
+          }
           DialogState.Scan -> {
             val scanViewModel: ScanViewModel = hiltViewModel()
             LaunchedEffect(Unit) {
@@ -104,7 +129,7 @@ fun SkyWatchApp() {
 
       ShareScreen(
           viewModel = viewModel,
-          onShareSelected = { share ->
+          onShareSelected = {
             navController.navigate(Routes.BROWSER)
           },
           onBack = {
@@ -122,7 +147,7 @@ fun SkyWatchApp() {
 
       FileBrowserScreen(
           viewModel = viewModel,
-          onFileSelected = { file -> navController.navigate(Routes.PLAYER) },
+          onFileSelected = { navController.navigate(Routes.PLAYER) },
           onSeriesSelected = { navController.navigate(Routes.SERIES_DETAIL) },
           onBack = { navController.popBackStack() },
       )
