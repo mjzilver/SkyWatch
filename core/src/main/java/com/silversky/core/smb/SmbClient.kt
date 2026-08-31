@@ -43,15 +43,14 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
   private var password: String? = null
   private var connection: Connection? = null
   private var session: Session? = null
+  private var authContext: AuthenticationContext? = null
 
   private val shares = mutableMapOf<String, DiskShare>()
 
-  // @TODO: make it so logging in as guest doesn't need a string for user and password
   fun connect(
       server: SmbServer,
       username: String,
       password: String,
-      isGuest: Boolean = false,
   ) {
     synchronized(connectionLock) {
       if (connection != null && session != null) {
@@ -60,10 +59,26 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
       }
 
       connectLocked(
-          server = server,
-          username = username,
-          password = password,
-          isGuest = isGuest,
+          server,
+          AuthenticationContext(
+              username,
+              password.toCharArray(),
+              null,
+          ),
+      )
+    }
+  }
+
+  fun connectAsGuest(server: SmbServer) {
+    synchronized(connectionLock) {
+      if (connection != null && session != null) {
+        logger.warn("Already connected")
+        return
+      }
+
+      connectLocked(
+          server,
+          AuthenticationContext.guest(),
       )
     }
   }
@@ -97,13 +112,12 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
       }
 
       val currentServer = server ?: throw IllegalStateException("No server available")
-      val currentUsername = username ?: throw IllegalStateException("No username available")
-      val currentPassword = password ?: throw IllegalStateException("No password available")
+      val currentAuthContext =
+          authContext ?: throw IllegalStateException("No authentication context available")
 
       connectLocked(
-          server = currentServer,
-          username = currentUsername,
-          password = currentPassword,
+          currentServer,
+          currentAuthContext,
       )
     }
   }
@@ -293,26 +307,22 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
     synchronized(connectionLock) {
       val currentServer = server ?: throw IllegalStateException("No server available for reconnect")
 
-      val currentUsername =
-          username ?: throw IllegalStateException("No username available for reconnect")
-      val currentPassword =
-          password ?: throw IllegalStateException("No password available for reconnect")
+      val authContext =
+          authContext
+              ?: throw IllegalStateException("No authentication context available for reconnect")
 
       invalidateConnectionLocked()
 
       connectLocked(
           server = currentServer,
-          username = currentUsername,
-          password = currentPassword,
+          authContext = authContext,
       )
     }
   }
 
   private fun connectLocked(
       server: SmbServer,
-      username: String,
-      password: String,
-      isGuest: Boolean = false,
+      authContext: AuthenticationContext,
   ) {
     if (connection != null && session != null) {
       return
@@ -327,24 +337,11 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
               server.port,
           )
 
-      val authenticationContext =
-          if (isGuest || username == "Everyone") {
-            AuthenticationContext.guest()
-          } else {
-            AuthenticationContext(
-                username,
-                password.toCharArray(),
-                null,
-            )
-          }
+      val newSession = newConnection.authenticate(authContext)
 
-      val newSession = newConnection.authenticate(authenticationContext)
-
-      this.server = server
-      this.username = username
-      this.password = password
       this.connection = newConnection
       this.session = newSession
+      this.authContext = authContext
 
       if (server.name == null) {
         server.name = newConnection.connectionContext.server.serverName

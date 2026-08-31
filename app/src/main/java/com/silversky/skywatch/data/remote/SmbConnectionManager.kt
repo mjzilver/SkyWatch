@@ -59,12 +59,15 @@ constructor(
 
         val client = SmbClient(logger)
         try {
-          client.connect(
-              server = savedServer.server,
-              username = savedServer.username,
-              password = savedServer.password,
-              isGuest = savedServer.isGuest,
-          )
+          if (savedServer.isGuest) {
+            client.connectAsGuest(server = savedServer.server)
+          } else {
+            client.connect(
+                server = savedServer.server,
+                username = savedServer.username,
+                password = savedServer.password,
+            )
+          }
 
           smbClient = client
           selectedServer = savedServer.server

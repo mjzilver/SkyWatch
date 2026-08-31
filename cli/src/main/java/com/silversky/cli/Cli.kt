@@ -108,10 +108,10 @@ class Cli(private val logger: Logger) {
     client = SmbClient(logger)
 
     try {
-      if (username == null && password == null) {
-        client!!.connect(server, "", "", true)
+      if (username != null && password != null) {
+        client!!.connect(server, username, password)
       } else {
-        client!!.connect(server, username!!, password!!)
+        client!!.connectAsGuest(server)
       }
 
       listShares()
@@ -508,18 +508,23 @@ class Cli(private val logger: Logger) {
     println(
         """
         Commands:
-          scan                                Scan network for SMB servers
-          scan-media                          Scan current share for movies and series
-          connect <server> <user> <password>  Connect to an SMB server
-          list [path]                         List files
-          shares                              List shares
-          use <share>                         Use share folder
-          open <path>                         Open a file
-          read <offset> <length>              Read bytes from opened file
-          info                                Show current connection
-          disconnect                          Disconnect
-          help                                Show this help
-          exit                                Exit
+          scan                                  Scan network for SMB servers
+          scan-media                            Scan current share for movies and series
+          connect <server> [user] [password]    Connect to an SMB server
+          shares                                List available shares
+          use <share>                           Select a share
+          list [path]                           List files and directories
+          ls [path]                             Alias for list
+          cd <path>                             Change current directory
+          tree                                  Show directory tree
+          open <path>                           Open a file
+          read <offset> <length>                Read bytes from opened file
+          download <local-path>                Download opened file
+          info                                  Show current connection
+          disconnect                            Disconnect from SMB server
+          help                                  Show this help
+          exit                                  Exit
+          quit                                  Alias for exit
         """
             .trimIndent()
     )
