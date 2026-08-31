@@ -1,9 +1,11 @@
 package com.silversky.skywatch
 
+import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.Color
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.media3.common.util.UnstableApi
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -38,6 +40,7 @@ object Routes {
   const val SETTINGS = "settings"
 }
 
+@OptIn(UnstableApi::class)
 @Composable
 fun SkyWatchApp() {
   val navController = rememberNavController()

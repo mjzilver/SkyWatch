@@ -31,6 +31,7 @@ import com.silversky.core.model.MovieInfo
 import com.silversky.core.model.SmbEntry
 import com.silversky.core.model.SmbEntryType
 import com.silversky.skywatch.data.local.PlaybackState
+import com.silversky.skywatch.model.BrowserTab
 import com.silversky.skywatch.ui.component.EmptyMessage
 import com.silversky.skywatch.ui.component.ErrorMessage
 import com.silversky.skywatch.ui.component.LoadingMessage
@@ -39,7 +40,6 @@ import com.silversky.skywatch.ui.component.PlaybackStatus
 import com.silversky.skywatch.ui.component.ScreenHeader
 import com.silversky.skywatch.ui.component.StatusIcon
 import com.silversky.skywatch.ui.component.getPlaybackStatus
-import com.silversky.skywatch.ui.viewmodel.BrowserTab
 import com.silversky.skywatch.ui.viewmodel.FileBrowserViewModel
 import com.silversky.skywatch.ui.viewmodel.MediaGroup
 

@@ -1,6 +1,5 @@
 package com.silversky.skywatch.ui.component
 
-import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,7 +21,6 @@ import androidx.media3.common.Format
 import androidx.media3.common.TrackGroup
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
-import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.tv.material3.Button
 import androidx.tv.material3.Icon
@@ -180,7 +178,6 @@ internal fun trackId(
   return format.id ?: "${format.language}|${format.label}|${format.sampleMimeType}"
 }
 
-@OptIn(UnstableApi::class)
 internal fun findTrack(
     player: ExoPlayer,
     trackType: Int,

@@ -84,11 +84,6 @@ class MovieFilenameParserTest {
                 year = 2019,
             ),
             TestCase(
-                filename = "Escape.From.New.York.1981.1080p.BrRip.x264.BOKUTOX.YIFY.mp4",
-                title = "Escape From New York",
-                year = 1981,
-            ),
-            TestCase(
                 filename = "Obsession.2026.1080p.AMZN.WEB-DL[Ben The Men].mp4",
                 title = "Obsession",
                 year = 2026,

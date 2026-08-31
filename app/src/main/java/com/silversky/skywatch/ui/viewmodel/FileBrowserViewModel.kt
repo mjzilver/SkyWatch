@@ -16,6 +16,7 @@ import com.silversky.skywatch.data.local.PlaybackStateStore
 import com.silversky.skywatch.data.remote.SmbConnectionManager
 import com.silversky.skywatch.data.repository.MediaRepository
 import com.silversky.skywatch.data.repository.SettingsRepository
+import com.silversky.skywatch.model.BrowserTab
 import com.silversky.skywatch.model.SortBy
 import com.silversky.skywatch.model.SortOrder
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,12 +24,6 @@ import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-enum class BrowserTab {
-  Folders,
-  Movies,
-  Series,
-}
 
 data class MediaGroup(
     val title: String,
@@ -47,8 +42,8 @@ constructor(
     private val logger: Logger,
 ) : ViewModel() {
 
-  var selectedTab by mutableStateOf(BrowserTab.Folders)
-    private set
+  val selectedTab
+    get() = connectionManager.lastBrowserTab
 
   var mediaItems by mutableStateOf<List<MediaInfo>>(emptyList())
     private set
@@ -209,7 +204,7 @@ constructor(
   }
 
   fun selectTab(tab: BrowserTab) {
-    selectedTab = tab
+    connectionManager.onTabSelected(tab)
     if (tab == BrowserTab.Movies || tab == BrowserTab.Series) {
       loadMedia()
     }

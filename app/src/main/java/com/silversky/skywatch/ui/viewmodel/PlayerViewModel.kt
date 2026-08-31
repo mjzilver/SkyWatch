@@ -284,11 +284,12 @@ constructor(
     val bitrate = videoBitrate
     val estimate = bandwidthEstimate
 
-      showLowBandwidthWarning = if (bitrate > 0 && estimate > 0 && player.playbackState == Player.STATE_READY) {
+    showLowBandwidthWarning =
+        if (bitrate > 0 && estimate > 0 && player.playbackState == Player.STATE_READY) {
           estimate < (bitrate * 1.2).toLong()
-      } else {
+        } else {
           false
-      }
+        }
   }
 
   private fun startPlayback() {

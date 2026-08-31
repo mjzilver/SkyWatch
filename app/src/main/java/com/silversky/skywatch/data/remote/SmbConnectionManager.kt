@@ -8,6 +8,7 @@ import com.silversky.core.model.SmbEntry
 import com.silversky.core.model.SmbEntryType
 import com.silversky.core.model.SmbServer
 import com.silversky.core.smb.SmbClient
+import com.silversky.skywatch.model.BrowserTab
 import com.silversky.skywatch.model.SavedServer
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -49,6 +50,9 @@ constructor(
     private set
 
   var selectedSeriesTitle by mutableStateOf<String?>(null)
+    private set
+
+  var lastBrowserTab by mutableStateOf(BrowserTab.Folders)
     private set
 
   suspend fun connect(savedServer: SavedServer) =
@@ -104,6 +108,10 @@ constructor(
 
   fun onSeriesSelected(title: String) {
     selectedSeriesTitle = title
+  }
+
+  fun onTabSelected(tab: BrowserTab) {
+    lastBrowserTab = tab
   }
 
   fun clearFile() {

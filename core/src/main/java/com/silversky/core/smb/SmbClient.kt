@@ -339,8 +339,8 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
 
       val newSession = newConnection.authenticate(authContext)
 
-    this.server = server
-    this.connection = newConnection
+      this.server = server
+      this.connection = newConnection
       this.session = newSession
       this.authContext = authContext
 
