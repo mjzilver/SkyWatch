@@ -46,6 +46,7 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
 
   private val shares = mutableMapOf<String, DiskShare>()
 
+  // @TODO: make it so logging in as guest doesn't need a string for user and password
   fun connect(
       server: SmbServer,
       username: String,
@@ -338,13 +339,6 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
           }
 
       val newSession = newConnection.authenticate(authenticationContext)
-
-      logger.debug(
-          "SMB SERVER: " +
-              "maxReadSize=${newConnection.connectionContext.negotiatedProtocol.maxReadSize} " +
-              "maxWriteSize=${newConnection.connectionContext.negotiatedProtocol.maxWriteSize} " +
-              "maxTransactSize=${newConnection.connectionContext.negotiatedProtocol.maxTransactSize}"
-      )
 
       this.server = server
       this.username = username

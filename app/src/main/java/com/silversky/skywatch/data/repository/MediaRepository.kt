@@ -22,7 +22,9 @@ constructor(
 ) {
   suspend fun getMediaForShare(serverIp: String, shareName: String): List<MediaInfo> =
       withContext(Dispatchers.IO) {
-        scannedMediaDao.getMediaForShare(serverIp, shareName).map { entity ->
+        val entities = scannedMediaDao.getMediaForShare(serverIp, shareName)
+
+        entities.map { entity ->
           if (entity.isMovie) {
             MovieInfo(
                 title = entity.title,

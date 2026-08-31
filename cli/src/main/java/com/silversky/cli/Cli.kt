@@ -90,12 +90,6 @@ class Cli(private val logger: Logger) {
     }
 
     val parts = arguments.split(" ")
-
-    if (parts.size < 3) {
-      println("Usage: connect <server|ip> <username> <password>")
-      return
-    }
-
     val serverArg = parts[0]
 
     val server =
@@ -107,14 +101,18 @@ class Cli(private val logger: Logger) {
                 name = resolveHostName(logger, serverArg),
             )
 
-    val username = parts[1]
-    val password = parts[2]
+    val username = parts.getOrNull(1)
+    val password = parts.getOrNull(2)
 
     client?.close()
     client = SmbClient(logger)
 
     try {
-      client!!.connect(server, username, password)
+      if (username == null && password == null) {
+        client!!.connect(server, "", "", true)
+      } else {
+        client!!.connect(server, username!!, password!!)
+      }
 
       listShares()
 

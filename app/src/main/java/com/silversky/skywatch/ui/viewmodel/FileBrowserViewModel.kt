@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.silversky.core.logger.Logger
+import com.silversky.core.model.EpisodeInfo
 import com.silversky.core.model.MediaInfo
 import com.silversky.core.model.MovieInfo
 import com.silversky.core.model.SmbEntry
@@ -29,6 +30,12 @@ enum class BrowserTab {
   Series,
 }
 
+data class MediaGroup(
+    val title: String,
+    val year: Int?,
+    val items: List<MediaInfo>,
+)
+
 @HiltViewModel
 class FileBrowserViewModel
 @Inject
@@ -46,6 +53,12 @@ constructor(
   var mediaItems by mutableStateOf<List<MediaInfo>>(emptyList())
     private set
 
+  var movieGroups by mutableStateOf<List<MediaGroup>>(emptyList())
+    private set
+
+  var seriesGroups by mutableStateOf<List<MediaGroup>>(emptyList())
+    private set
+
   var movieVersionsToPick by mutableStateOf<List<MovieInfo>?>(null)
     private set
 
@@ -59,6 +72,9 @@ constructor(
     private set
 
   var resumeEntries by mutableStateOf<Map<String, PlaybackState>>(emptyMap())
+    private set
+
+  var mediaResumeStates by mutableStateOf<Map<String, PlaybackState>>(emptyMap())
     private set
 
   var loading by mutableStateOf(false)
@@ -97,22 +113,7 @@ constructor(
 
         rawEntries = result
 
-        val resumeMap =
-            result
-                .filter { it.type == SmbEntryType.File }
-                .mapNotNull { entry ->
-                  val progress =
-                      playbackStateStore.get(
-                          ip = server?.ipAddress ?: "",
-                          share = shareName,
-                          path = entry.path,
-                      )
-
-                  progress?.let {
-                    entry.path to it
-                  }
-                }
-                .toMap()
+        val resumeMap = playbackStateStore.getForShare(server?.ipAddress ?: "", shareName)
 
         withContext(Dispatchers.Main) {
           resumeEntries = resumeMap
@@ -220,8 +221,54 @@ constructor(
 
     viewModelScope.launch {
       val cached = mediaRepository.getMediaForShare(serverIp, share)
-      mediaItems = applyMediaSorting(cached)
+      mediaItems = cached
+      updateGroups()
+      loadMediaPlaybackStates()
       startScan()
+    }
+  }
+
+  private fun updateGroups() {
+    val sorted = applyMediaSorting(mediaItems)
+
+    val movies = sorted.filterIsInstance<MovieInfo>()
+    movieGroups = groupSmartly(movies)
+
+    val series = sorted.filterIsInstance<EpisodeInfo>()
+    seriesGroups = groupSmartly(series)
+  }
+
+  private fun <T : MediaInfo> groupSmartly(items: List<T>): List<MediaGroup> {
+    val grouped = items.groupBy { it.title.lowercase().trim() }
+
+    return grouped
+        .map { (key, groupItems) ->
+          val bestTitle =
+              groupItems.groupBy { it.title }.maxByOrNull { it.value.size }?.key
+                  ?: groupItems.first().title
+
+          val bestYear = groupItems.mapNotNull { it.year }.minOrNull()
+
+          MediaGroup(
+              title = bestTitle,
+              year = bestYear,
+              items = groupItems,
+          )
+        }
+        .sortedBy { it.title.lowercase() }
+  }
+
+  private suspend fun loadMediaPlaybackStates() {
+    val serverIp = server?.ipAddress ?: return
+    val share = shareName ?: return
+
+    val states =
+        withContext(Dispatchers.IO) {
+          playbackStateStore.getForShare(serverIp, share)
+        }
+
+    withContext(Dispatchers.Main) {
+      mediaResumeStates = states
     }
   }
 
@@ -236,7 +283,9 @@ constructor(
       isScanning = true
       try {
         val result = mediaRepository.scanAndSave(client, serverIp, share)
-        mediaItems = applyMediaSorting(result)
+        mediaItems = result
+        updateGroups()
+        loadMediaPlaybackStates()
       } catch (e: Exception) {
         logger.error("Failed to scan media", e)
       } finally {

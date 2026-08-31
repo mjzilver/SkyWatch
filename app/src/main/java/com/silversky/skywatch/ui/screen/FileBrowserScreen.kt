@@ -13,13 +13,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -31,17 +27,21 @@ import androidx.tv.material3.Tab
 import androidx.tv.material3.TabRow
 import androidx.tv.material3.Text
 import com.silversky.core.model.EpisodeInfo
-import com.silversky.core.model.MediaInfo
 import com.silversky.core.model.MovieInfo
 import com.silversky.core.model.SmbEntry
 import com.silversky.core.model.SmbEntryType
+import com.silversky.skywatch.data.local.PlaybackState
 import com.silversky.skywatch.ui.component.EmptyMessage
 import com.silversky.skywatch.ui.component.ErrorMessage
 import com.silversky.skywatch.ui.component.LoadingMessage
 import com.silversky.skywatch.ui.component.MovieVersionDialog
+import com.silversky.skywatch.ui.component.PlaybackStatus
 import com.silversky.skywatch.ui.component.ScreenHeader
+import com.silversky.skywatch.ui.component.StatusIcon
+import com.silversky.skywatch.ui.component.getPlaybackStatus
 import com.silversky.skywatch.ui.viewmodel.BrowserTab
 import com.silversky.skywatch.ui.viewmodel.FileBrowserViewModel
+import com.silversky.skywatch.ui.viewmodel.MediaGroup
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -126,19 +126,11 @@ fun FileBrowserScreen(
                   key = { entry -> entry.path },
               ) { entry ->
                 val progress = resumeEntries[entry.path]
-
-                val hasFinished =
-                    progress != null &&
-                        (progress.completed ||
-                            (progress.duration > 0 &&
-                                progress.position >= progress.duration * 0.90))
-
-                val hasResumePosition = progress != null && !hasFinished
+                val status = getPlaybackStatus(progress)
 
                 FileEntryButton(
                     entry = entry,
-                    hasResumePosition = hasResumePosition,
-                    hasFinished = hasFinished,
+                    status = status,
                     onClick = {
                       if (entry.type == SmbEntryType.Directory) {
                         viewModel.navigateTo(entry.path)
@@ -154,19 +146,17 @@ fun FileBrowserScreen(
       }
 
       BrowserTab.Movies -> {
-        val movies = viewModel.mediaItems.filterIsInstance<MovieInfo>()
         MediaList(
-            mediaItems = movies,
+            groups = viewModel.movieGroups,
+            resumeStates = viewModel.mediaResumeStates,
             isScanning = viewModel.isScanning,
-            title = { it.title },
-            year = { it.year },
-            onClick = { movie ->
-              val versions = movies.filter { it.title == movie.title && it.year == movie.year }
+            onClick = { group ->
+              val versions = group.items.filterIsInstance<MovieInfo>()
               if (versions.size == 1) {
                 viewModel.selectFile(
                     SmbEntry(
-                        name = movie.title,
-                        path = movie.entryPath,
+                        name = group.title,
+                        path = versions.first().entryPath,
                         type = SmbEntryType.File,
                         shareName = viewModel.shareName ?: "",
                     ),
@@ -176,10 +166,10 @@ fun FileBrowserScreen(
                 viewModel.pickMovieVersion(versions)
               }
             },
-            trailingContent = { items ->
-              if (items.size > 1) {
+            trailingContent = { group ->
+              if (group.items.size > 1) {
                 Text(
-                    text = "${items.size} versions",
+                    text = "${group.items.size} versions",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -190,15 +180,15 @@ fun FileBrowserScreen(
 
       BrowserTab.Series -> {
         MediaList(
-            mediaItems = viewModel.mediaItems.filterIsInstance<EpisodeInfo>(),
+            groups = viewModel.seriesGroups,
+            resumeStates = viewModel.mediaResumeStates,
             isScanning = viewModel.isScanning,
-            title = { it.title },
-            year = { it.year },
-            onClick = { episode ->
-              viewModel.startSeriesSelection(episode.title, onSeriesSelected)
+            onClick = { group ->
+              viewModel.startSeriesSelection(group.title, onSeriesSelected)
             },
-            trailingContent = { items ->
-              val seasonCount = items.distinctBy { it.season }.size
+            trailingContent = { group ->
+              val seasonCount =
+                  group.items.filterIsInstance<EpisodeInfo>().distinctBy { it.season }.size
               Text(
                   text = "$seasonCount seasons",
                   style = MaterialTheme.typography.labelSmall,
@@ -233,57 +223,64 @@ fun FileBrowserScreen(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun <T : MediaInfo> MediaList(
-    mediaItems: List<T>,
+private fun MediaList(
+    groups: List<MediaGroup>,
+    resumeStates: Map<String, PlaybackState>,
     isScanning: Boolean,
-    title: (T) -> String,
-    year: (T) -> Int?,
-    onClick: (T) -> Unit,
-    trailingContent: @Composable (List<T>) -> Unit = {},
+    onClick: (MediaGroup) -> Unit,
+    trailingContent: @Composable (MediaGroup) -> Unit = {},
 ) {
-  if (mediaItems.isEmpty() && isScanning) {
+  if (groups.isEmpty() && isScanning) {
     LoadingMessage("Scanning media...")
     return
   }
 
-  if (mediaItems.isEmpty()) {
+  if (groups.isEmpty()) {
     EmptyMessage("No media found.")
     return
   }
-
-  val grouped = mediaItems.groupBy { title(it) to year(it) }
-  val keys = remember(grouped) { grouped.keys.toList() }
 
   LazyColumn(
       modifier = Modifier.fillMaxWidth(),
       verticalArrangement = Arrangement.spacedBy(8.dp),
   ) {
     items(
-        items = keys,
-        key = { "${it.first}_${it.second}" },
-    ) { (groupTitle, groupYear) ->
-      val itemsForGroup = grouped[groupTitle to groupYear] ?: emptyList()
+        items = groups,
+        key = { "${it.title}_${it.year}" },
+    ) { group ->
+      val statuses = group.items.map { getPlaybackStatus(resumeStates[it.entryPath]) }
+      val aggregateStatus =
+          when {
+            statuses.all { it == PlaybackStatus.Finished } -> PlaybackStatus.Finished
+            statuses.any { it == PlaybackStatus.InProgress || it == PlaybackStatus.Finished } ->
+                PlaybackStatus.InProgress
+            else -> PlaybackStatus.NotStarted
+          }
 
       Button(
-          onClick = { onClick(itemsForGroup.first()) },
+          onClick = { onClick(group) },
           modifier = Modifier.fillMaxWidth(),
       ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+          StatusIcon(status = aggregateStatus)
+
+          Spacer(modifier = Modifier.width(12.dp))
+
           Text(
               text =
-                  if (groupYear != null) {
-                    "$groupTitle ($groupYear)"
+                  if (group.year != null) {
+                    "${group.title} (${group.year})"
                   } else {
-                    groupTitle
+                    group.title
                   },
           )
 
           Spacer(modifier = Modifier.weight(1f))
 
-          trailingContent(itemsForGroup)
+          trailingContent(group)
         }
       }
     }
@@ -294,8 +291,7 @@ private fun <T : MediaInfo> MediaList(
 @Composable
 private fun FileEntryButton(
     entry: SmbEntry,
-    hasResumePosition: Boolean,
-    hasFinished: Boolean,
+    status: PlaybackStatus,
     onClick: () -> Unit,
 ) {
   Button(
@@ -306,16 +302,14 @@ private fun FileEntryButton(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-      Icon(
-          imageVector =
-              when {
-                entry.type == SmbEntryType.Directory -> Icons.Outlined.Folder
-                hasFinished -> Icons.Filled.Done
-                hasResumePosition -> Icons.Filled.PlayCircle
-                else -> Icons.Filled.PlayArrow
-              },
-          contentDescription = null,
-      )
+      if (entry.type == SmbEntryType.Directory) {
+        Icon(
+            imageVector = Icons.Outlined.Folder,
+            contentDescription = null,
+        )
+      } else {
+        StatusIcon(status = status)
+      }
 
       Spacer(modifier = Modifier.width(12.dp))
 

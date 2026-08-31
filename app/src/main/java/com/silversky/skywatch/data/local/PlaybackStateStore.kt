@@ -39,6 +39,25 @@ class PlaybackStateStore(private val context: Context) {
     }
   }
 
+  suspend fun getForShare(ip: String, share: String): Map<String, PlaybackState> {
+    val prefix = "state|$ip|$share|"
+    val preferences = context.playbackDataStore.data.first()
+
+    return preferences
+        .asMap()
+        .filterKeys { it.name.startsWith(prefix) }
+        .mapNotNull { (key, value) ->
+          if (value !is String) return@mapNotNull null
+          val path = key.name.removePrefix(prefix)
+          try {
+            path to json.decodeFromString<PlaybackState>(value)
+          } catch (e: Exception) {
+            null
+          }
+        }
+        .toMap()
+  }
+
   suspend fun save(
       ip: String,
       share: String,
