@@ -15,7 +15,7 @@ import java.io.InterruptedIOException
 class SmbDataSource(
     private val smbClient: SmbClient,
     private val logger: Logger,
-) : BaseDataSource(false) {
+) : BaseDataSource(true) {
 
   companion object {
     private const val BUFFER_SIZE = 1024 * 1024

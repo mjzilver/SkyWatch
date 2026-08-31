@@ -24,6 +24,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import androidx.tv.material3.Text
 import com.silversky.skywatch.ui.component.AudioTrackDialog
+import com.silversky.skywatch.ui.component.DebugInfoDialog
 import com.silversky.skywatch.ui.component.PlaybackErrorOverlay
 import com.silversky.skywatch.ui.component.PlayerControls
 import com.silversky.skywatch.ui.component.SpeedDialog
@@ -56,12 +57,14 @@ fun PlayerScreen(
       viewModel.showAudioMenu,
       viewModel.showSubtitleMenu,
       viewModel.showSpeedMenu,
+      viewModel.showDebugMenu,
   ) {
     if (
         viewModel.controlsVisible &&
             !viewModel.showAudioMenu &&
             !viewModel.showSubtitleMenu &&
-            !viewModel.showSpeedMenu
+            !viewModel.showSpeedMenu &&
+            !viewModel.showDebugMenu
     ) {
       delay(5_000L.milliseconds)
       viewModel.controlsVisible = false
@@ -90,6 +93,10 @@ fun PlayerScreen(
 
       viewModel.showSpeedMenu -> {
         viewModel.showSpeedMenu = false
+      }
+
+      viewModel.showDebugMenu -> {
+        viewModel.showDebugMenu = false
       }
 
       viewModel.controlsVisible -> {
@@ -211,6 +218,7 @@ fun PlayerScreen(
           position = position,
           duration = duration,
           isPlaying = isPlaying,
+          showLowBandwidthWarning = viewModel.showLowBandwidthWarning,
           onPlay = { viewModel.togglePlay() },
           onAudio = {
             viewModel.showAudioMenu = true
@@ -225,7 +233,21 @@ fun PlayerScreen(
             viewModel.showSpeedMenu = true
             viewModel.controlsVisible = true
           },
+          onDebugInfo = {
+            viewModel.showDebugMenu = true
+            viewModel.controlsVisible = true
+          },
           onHideControls = { viewModel.controlsVisible = false },
+      )
+    }
+
+    if (viewModel.showDebugMenu) {
+      DebugInfoDialog(
+          viewModel = viewModel,
+          onDismiss = {
+            viewModel.showDebugMenu = false
+            viewModel.controlsVisible = true
+          },
       )
     }
 

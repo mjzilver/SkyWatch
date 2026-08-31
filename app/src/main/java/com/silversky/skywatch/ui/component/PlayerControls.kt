@@ -11,8 +11,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,8 +38,10 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.tv.material3.Button
+import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import com.silversky.core.model.SmbEntry
 import com.silversky.skywatch.utils.formatTime
@@ -108,11 +113,13 @@ internal fun PlayerControls(
     position: Long,
     duration: Long,
     isPlaying: Boolean,
+    showLowBandwidthWarning: Boolean,
     onPlay: () -> Unit,
     onAudio: () -> Unit,
     onStop: () -> Unit,
     onSubtitles: () -> Unit,
     onSpeed: () -> Unit,
+    onDebugInfo: () -> Unit,
     onHideControls: () -> Unit,
 ) {
   val playFocus = remember {
@@ -218,10 +225,24 @@ internal fun PlayerControls(
                     vertical = 24.dp,
                 ),
     ) {
-      Text(
-          text = file.name,
-          color = Color.White,
-      )
+      Row(
+          modifier = Modifier.fillMaxWidth(),
+          verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Text(
+            text = file.name,
+            color = Color.White,
+            modifier = Modifier.weight(1f),
+        )
+
+        if (showLowBandwidthWarning) {
+          Text(
+              text = "Slow Network",
+              color = Color(0xFFFFCC00),
+              fontSize = 14.sp,
+          )
+        }
+      }
 
       Spacer(modifier = Modifier.height(12.dp))
 
@@ -360,6 +381,21 @@ internal fun PlayerControls(
             text = "Speed",
             onClick = onSpeed,
         )
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        Button(
+            onClick = onDebugInfo,
+            modifier = Modifier.size(48.dp),
+        ) {
+          Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = "Playback Information",
+                modifier = Modifier.size(20.dp),
+            )
+          }
+        }
       }
     }
   }
@@ -380,7 +416,9 @@ internal fun PlayerButton(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-      Text(text)
+      if (text.isNotEmpty()) {
+        Text(text)
+      }
       content?.invoke()
     }
   }

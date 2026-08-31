@@ -2,6 +2,7 @@ package com.silversky.skywatch.ui.viewmodel
 
 import android.content.Context
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -13,6 +14,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.text.Cue
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.analytics.AnalyticsListener
 import com.silversky.core.logger.Logger
 import com.silversky.skywatch.data.local.PlaybackState
 import com.silversky.skywatch.data.local.PlaybackStateStore
@@ -72,6 +74,8 @@ constructor(
 
   var showSpeedMenu by mutableStateOf(false)
 
+  var showDebugMenu by mutableStateOf(false)
+
   var onPlaybackEnded: (() -> Unit)? = null
 
   var position by mutableLongStateOf(0L)
@@ -95,6 +99,27 @@ constructor(
   var internalCues by mutableStateOf<List<Cue>>(emptyList())
     private set
 
+  var bandwidthEstimate by mutableLongStateOf(0L)
+    private set
+
+  private val bandwidthSamples = mutableListOf<Long>()
+  private val MAX_SAMPLES = 5
+
+  var videoBitrate by mutableIntStateOf(0)
+    private set
+
+  var showLowBandwidthWarning by mutableStateOf(false)
+    private set
+
+  var videoDecoderName by mutableStateOf<String?>(null)
+    private set
+
+  var audioDecoderName by mutableStateOf<String?>(null)
+    private set
+
+  var droppedFrames by mutableIntStateOf(0)
+    private set
+
   private var savedState: PlaybackState? = null
   private var tracksApplied = false
   private var saveJob: kotlinx.coroutines.Job? = null
@@ -116,6 +141,54 @@ constructor(
   }
 
   private fun setupPlayer() {
+    player.addAnalyticsListener(
+        object : AnalyticsListener {
+          override fun onBandwidthEstimate(
+              eventTime: AnalyticsListener.EventTime,
+              totalLoadTimeMs: Int,
+              totalBytesLoaded: Long,
+              bitrateEstimate: Long,
+          ) {
+            if (bitrateEstimate > 0) {
+              addBandwidthSample(bitrateEstimate)
+            }
+          }
+
+          override fun onLoadCompleted(
+              eventTime: AnalyticsListener.EventTime,
+              loadEventInfo: androidx.media3.exoplayer.source.LoadEventInfo,
+              mediaLoadData: androidx.media3.exoplayer.source.MediaLoadData,
+          ) {
+            val bytes = loadEventInfo.bytesLoaded
+            val durationMs = loadEventInfo.loadDurationMs
+            if (bytes > 0 && durationMs > 0) {
+              val currentBitrate = (bytes * 8000) / durationMs
+              if (currentBitrate > 0) {
+                addBandwidthSample(currentBitrate)
+              }
+            }
+          }
+
+          override fun onVideoDecoderInitialized(
+              eventTime: AnalyticsListener.EventTime,
+              decoderName: String,
+              initializedTimestampMs: Long,
+              initializationDurationMs: Long,
+          ) {
+            videoDecoderName = decoderName
+          }
+
+          override fun onAudioDecoderInitialized(
+              eventTime: AnalyticsListener.EventTime,
+              decoderName: String,
+              initializedTimestampMs: Long,
+              initializationDurationMs: Long,
+          ) {
+            audioDecoderName = decoderName
+          }
+        }
+    )
+
     player.addListener(
         object : Player.Listener {
           override fun onPlaybackStateChanged(state: Int) {
@@ -141,6 +214,7 @@ constructor(
           }
 
           override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+            updateVideoBitrate()
             if (!tracksApplied && !tracks.groups.isEmpty()) {
               applySavedTracks()
             }
@@ -180,6 +254,33 @@ constructor(
           }
         }
     )
+  }
+
+  private fun addBandwidthSample(sample: Long) {
+    bandwidthSamples.add(sample)
+    if (bandwidthSamples.size > MAX_SAMPLES) {
+      bandwidthSamples.removeAt(0)
+    }
+    bandwidthEstimate = bandwidthSamples.average().toLong()
+    updateBandwidthWarning()
+  }
+
+  private fun updateVideoBitrate() {
+    val format = player.videoFormat
+    if (format != null && format.bitrate != androidx.media3.common.Format.NO_VALUE) {
+      videoBitrate = format.bitrate
+    }
+  }
+
+  private fun updateBandwidthWarning() {
+    val bitrate = videoBitrate
+    val estimate = bandwidthEstimate
+
+    if (bitrate > 0 && estimate > 0 && player.playbackState == Player.STATE_READY) {
+      showLowBandwidthWarning = estimate < (bitrate * 1.2).toLong()
+    } else {
+      showLowBandwidthWarning = false
+    }
   }
 
   private fun startPlayback() {
@@ -284,6 +385,13 @@ constructor(
       while (isActive) {
         position = player.currentPosition.coerceAtLeast(0L)
         duration = player.duration.takeIf { it > 0L } ?: 0L
+
+        if (showDebugMenu) {
+          droppedFrames = player.videoDecoderCounters?.droppedBufferCount ?: 0
+          // Force bitrate/bandwidth update if needed
+          updateVideoBitrate()
+        }
+
         delay(250L.milliseconds)
       }
     }
