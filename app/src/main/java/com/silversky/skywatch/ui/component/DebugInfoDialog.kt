@@ -31,7 +31,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.tv.material3.Text
 import com.silversky.skywatch.ui.viewmodel.PlayerViewModel
 
-@androidx.annotation.OptIn(UnstableApi::class)
+@UnstableApi
 @Composable
 internal fun DebugInfoDialog(
     viewModel: PlayerViewModel,

@@ -9,12 +9,19 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
+import androidx.media3.common.Format.NO_VALUE
+import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
+import androidx.media3.common.Tracks
 import androidx.media3.common.text.Cue
+import androidx.media3.common.text.CueGroup
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.source.LoadEventInfo
+import androidx.media3.exoplayer.source.MediaLoadData
 import com.silversky.core.logger.Logger
 import com.silversky.skywatch.data.local.PlaybackState
 import com.silversky.skywatch.data.local.PlaybackStateStore
@@ -34,12 +41,13 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@UnstableApi
 @HiltViewModel
 class PlayerViewModel
 @Inject
@@ -103,7 +111,7 @@ constructor(
     private set
 
   private val bandwidthSamples = mutableListOf<Long>()
-  private val MAX_SAMPLES = 5
+  private val maxSamples = 5
 
   var videoBitrate by mutableIntStateOf(0)
     private set
@@ -122,7 +130,7 @@ constructor(
 
   private var savedState: PlaybackState? = null
   private var tracksApplied = false
-  private var saveJob: kotlinx.coroutines.Job? = null
+  private var saveJob: Job? = null
 
   val client
     get() = connectionManager.smbClient
@@ -156,8 +164,8 @@ constructor(
 
           override fun onLoadCompleted(
               eventTime: AnalyticsListener.EventTime,
-              loadEventInfo: androidx.media3.exoplayer.source.LoadEventInfo,
-              mediaLoadData: androidx.media3.exoplayer.source.MediaLoadData,
+              loadEventInfo: LoadEventInfo,
+              mediaLoadData: MediaLoadData,
           ) {
             val bytes = loadEventInfo.bytesLoaded
             val durationMs = loadEventInfo.loadDurationMs
@@ -213,7 +221,7 @@ constructor(
             this@PlayerViewModel.isPlaying = isPlaying
           }
 
-          override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+          override fun onTracksChanged(tracks: Tracks) {
             updateVideoBitrate()
             if (!tracksApplied && !tracks.groups.isEmpty()) {
               applySavedTracks()
@@ -221,13 +229,13 @@ constructor(
           }
 
           override fun onMediaItemTransition(
-              mediaItem: androidx.media3.common.MediaItem?,
+              mediaItem: MediaItem?,
               reason: Int,
           ) {
             tracksApplied = false
           }
 
-          override fun onCues(cueGroup: androidx.media3.common.text.CueGroup) {
+          override fun onCues(cueGroup: CueGroup) {
             internalCues = cueGroup.cues
           }
 
@@ -258,7 +266,7 @@ constructor(
 
   private fun addBandwidthSample(sample: Long) {
     bandwidthSamples.add(sample)
-    if (bandwidthSamples.size > MAX_SAMPLES) {
+    if (bandwidthSamples.size > maxSamples) {
       bandwidthSamples.removeAt(0)
     }
     bandwidthEstimate = bandwidthSamples.average().toLong()
@@ -267,7 +275,7 @@ constructor(
 
   private fun updateVideoBitrate() {
     val format = player.videoFormat
-    if (format != null && format.bitrate != androidx.media3.common.Format.NO_VALUE) {
+    if (format != null && format.bitrate != NO_VALUE) {
       videoBitrate = format.bitrate
     }
   }
@@ -276,11 +284,11 @@ constructor(
     val bitrate = videoBitrate
     val estimate = bandwidthEstimate
 
-    if (bitrate > 0 && estimate > 0 && player.playbackState == Player.STATE_READY) {
-      showLowBandwidthWarning = estimate < (bitrate * 1.2).toLong()
-    } else {
-      showLowBandwidthWarning = false
-    }
+      showLowBandwidthWarning = if (bitrate > 0 && estimate > 0 && player.playbackState == Player.STATE_READY) {
+          estimate < (bitrate * 1.2).toLong()
+      } else {
+          false
+      }
   }
 
   private fun startPlayback() {

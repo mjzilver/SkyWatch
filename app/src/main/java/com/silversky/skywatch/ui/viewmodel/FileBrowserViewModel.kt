@@ -242,7 +242,7 @@ constructor(
     val grouped = items.groupBy { it.title.lowercase().trim() }
 
     return grouped
-        .map { (key, groupItems) ->
+        .map { (_, groupItems) ->
           val bestTitle =
               groupItems.groupBy { it.title }.maxByOrNull { it.value.size }?.key
                   ?: groupItems.first().title

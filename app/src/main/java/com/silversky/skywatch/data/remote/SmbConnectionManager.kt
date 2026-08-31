@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.silversky.core.logger.Logger
 import com.silversky.core.model.SmbEntry
+import com.silversky.core.model.SmbEntryType
 import com.silversky.core.model.SmbServer
 import com.silversky.core.smb.SmbClient
 import com.silversky.skywatch.model.SavedServer
@@ -96,7 +97,7 @@ constructor(
         SmbEntry(
             name = name,
             path = path,
-            type = com.silversky.core.model.SmbEntryType.File,
+            type = SmbEntryType.File,
             shareName = share,
         )
   }

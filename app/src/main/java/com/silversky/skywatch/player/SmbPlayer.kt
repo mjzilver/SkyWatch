@@ -5,6 +5,7 @@ import androidx.annotation.OptIn
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -24,7 +25,6 @@ fun getSubtitleCacheDir(context: Context, videoUri: String): File {
   return dir
 }
 
-@OptIn(UnstableApi::class)
 suspend fun prepareSmbMediaItem(
     context: Context,
     smbClient: SmbClient,
@@ -133,7 +133,7 @@ fun createSmbPlayer(
   val smbDataSourceFactory = SmbDataSourceFactory(smbClient, logger, bandwidthMeter)
 
   val dataSourceFactory =
-      androidx.media3.datasource.DefaultDataSource.Factory(
+      DefaultDataSource.Factory(
           context,
           smbDataSourceFactory,
       )

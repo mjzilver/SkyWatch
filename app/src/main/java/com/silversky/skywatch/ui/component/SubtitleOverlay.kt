@@ -1,5 +1,6 @@
 package com.silversky.skywatch.ui.component
 
+import android.graphics.Typeface
 import android.text.style.AbsoluteSizeSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
@@ -101,11 +102,11 @@ private fun htmlToAnnotatedString(text: String): AnnotatedString {
       when (span) {
         is StyleSpan -> {
           when (span.style) {
-            android.graphics.Typeface.BOLD ->
+            Typeface.BOLD ->
                 addStyle(SpanStyle(fontWeight = FontWeight.Bold), start, end)
-            android.graphics.Typeface.ITALIC ->
+            Typeface.ITALIC ->
                 addStyle(SpanStyle(fontStyle = FontStyle.Italic), start, end)
-            android.graphics.Typeface.BOLD_ITALIC ->
+            Typeface.BOLD_ITALIC ->
                 addStyle(
                     SpanStyle(fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic),
                     start,

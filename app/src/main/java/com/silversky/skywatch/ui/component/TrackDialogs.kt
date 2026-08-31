@@ -55,7 +55,6 @@ internal fun AudioTrackDialog(
   )
 }
 
-@OptIn(UnstableApi::class)
 @Composable
 internal fun TrackDialog(
     title: String,

@@ -34,7 +34,7 @@ import com.silversky.skywatch.ui.viewmodel.PlayerViewModel
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
 
-@androidx.annotation.OptIn(UnstableApi::class)
+@UnstableApi
 @Composable
 fun PlayerScreen(
     viewModel: PlayerViewModel,
