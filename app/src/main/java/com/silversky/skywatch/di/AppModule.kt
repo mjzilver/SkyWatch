@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.room.Room
 import com.silversky.core.logger.Logger
 import com.silversky.core.parser.FilenameParser
-import com.silversky.core.parser.TokenClassifier
 import com.silversky.core.smb.SmbScanner
 import com.silversky.skywatch.data.local.PlaybackStateStore
 import com.silversky.skywatch.data.local.db.AppDatabase
@@ -72,7 +71,5 @@ object AppModule {
   @Provides
   fun provideScannedMediaDao(database: AppDatabase): ScannedMediaDao = database.scannedMediaDao()
 
-  @Provides
-  @Singleton
-  fun provideFilenameParser(): FilenameParser = FilenameParser()
+  @Provides @Singleton fun provideFilenameParser(): FilenameParser = FilenameParser()
 }

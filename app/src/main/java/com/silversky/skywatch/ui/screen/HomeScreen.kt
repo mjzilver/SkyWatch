@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -20,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
+import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.silversky.skywatch.ui.viewmodel.HomeViewModel
@@ -32,7 +35,6 @@ fun HomeScreen(
     onSettingsClick: () -> Unit,
 ) {
   val savedServers by viewModel.servers.collectAsState()
-  val error = viewModel.scanError
 
   Column(
       modifier =
@@ -72,13 +74,6 @@ fun HomeScreen(
       Text("Add Server")
     }
 
-    error?.let {
-      Text(
-          text = it,
-          style = MaterialTheme.typography.bodyLarge,
-      )
-    }
-
     Column {
       Text(
           text = "Saved Servers",
@@ -103,13 +98,26 @@ fun HomeScreen(
                   },
                   modifier = Modifier.weight(1f),
               ) {
-                Column {
-                  Text(server.server.name ?: server.server.ipAddress)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                  Column(modifier = Modifier.weight(1f)) {
+                    Text(server.server.name ?: server.server.ipAddress)
 
-                  Text(
-                      server.server.ipAddress,
-                      style = MaterialTheme.typography.bodySmall,
-                  )
+                    Text(
+                        server.server.ipAddress,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                  }
+
+                  if (viewModel.connectingServer == server) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = LocalContentColor.current,
+                    )
+                  }
                 }
               }
 

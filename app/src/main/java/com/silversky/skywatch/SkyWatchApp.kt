@@ -115,6 +115,23 @@ fun SkyWatchApp() {
                 servers = scanViewModel.scanResults,
             )
           }
+          is DialogState.Error -> {
+            SkyWatchDialog(
+                title = "Cannot Connect",
+                onDismiss = { viewModel.dismissDialog() },
+                buttons = {
+                  Button(onClick = { viewModel.dismissDialog() }) {
+                    Text("OK")
+                  }
+                },
+            ) {
+              Text(
+                  text = dialog.message,
+                  style = MaterialTheme.typography.bodyLarge,
+                  color = Color.White,
+              )
+            }
+          }
         }
       }
     }

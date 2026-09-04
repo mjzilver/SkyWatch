@@ -29,6 +29,8 @@ sealed interface DialogState {
   data class DeleteConfirmation(val server: SavedServer) : DialogState
 
   data object Scan : DialogState
+
+  data class Error(val message: String) : DialogState
 }
 
 @HiltViewModel
@@ -44,11 +46,11 @@ constructor(
 
   val servers: StateFlow<List<SavedServer>> =
       repository.servers.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-  var scanError by mutableStateOf<String?>(null)
+
+  var connectingServer by mutableStateOf<SavedServer?>(null)
     private set
 
   fun addServer() {
-    scanError = null
     dialog = DialogState.Server()
   }
 
@@ -70,11 +72,16 @@ constructor(
 
   fun selectServer(savedServer: SavedServer, onConnected: () -> Unit) {
     viewModelScope.launch {
+      connectingServer = savedServer
       connectionManager.connect(savedServer)
+      connectingServer = null
       if (connectionManager.connectionState.value is ConnectionState.Connected) {
         onConnected()
       } else if (connectionManager.connectionState.value is ConnectionState.Error) {
-        scanError = (connectionManager.connectionState.value as ConnectionState.Error).message
+        dialog =
+            DialogState.Error(
+                (connectionManager.connectionState.value as ConnectionState.Error).message
+            )
       }
     }
   }

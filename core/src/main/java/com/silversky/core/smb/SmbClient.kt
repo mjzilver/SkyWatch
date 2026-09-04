@@ -46,6 +46,7 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
   private var authContext: AuthenticationContext? = null
 
   private val shares = mutableMapOf<String, DiskShare>()
+  private val maxRetries = 3
 
   fun connect(
       server: SmbServer,
@@ -191,7 +192,6 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
                 EnumSet.noneOf(FileAttributes::class.java),
                 EnumSet.of(
                     SMB2ShareAccess.FILE_SHARE_READ,
-                    SMB2ShareAccess.FILE_SHARE_WRITE,
                 ),
                 SMB2CreateDisposition.FILE_OPEN,
                 EnumSet.noneOf(SMB2CreateOptions::class.java),
@@ -255,7 +255,7 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
   ): T {
     var lastException: Exception? = null
 
-    repeat(5) { attempt ->
+    repeat(maxRetries) { attempt ->
       try {
         return operation()
       } catch (e: Exception) {
@@ -266,7 +266,7 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
 
         lastException = e
 
-        if (attempt == 4) {
+        if (attempt == maxRetries - 1) {
           logger.error(
               "SMB operation failed after 5 attempts",
               e,
@@ -274,7 +274,7 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
           throw e
         }
 
-        val delay = 200L shl attempt
+        val delay = 200L * attempt
 
         logger.warn("SMB operation failed " + "(attempt ${attempt + 1}/5): ${e.message}")
 
