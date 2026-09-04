@@ -11,7 +11,7 @@ $JarPath = Join-Path $ToolDir "ktfmt.jar"
 if (-not (Test-Path $JarPath)) {
     New-Item -ItemType Directory -Path $ToolDir -Force | Out-Null
 
-    $release = Invoke-RestMethod  -Uri "https://api.github.com/repos/facebook/ktfmt/releases/latest" 
+    $release = Invoke-RestMethod  -Uri "https://api.github.com/repos/Kotlin/ktfmt/releases/latest" 
 
     $asset = $release.assets |
         Where-Object { $_.name -like "*with-dependencies.jar" } |

@@ -8,7 +8,6 @@ import com.silversky.core.model.SmbEntryType
 import com.silversky.core.model.SmbFile
 import com.silversky.core.model.SmbServer
 import com.silversky.core.parser.FilenameParser
-import com.silversky.core.parser.TokenClassifier
 import com.silversky.core.smb.MediaScanner
 import com.silversky.core.smb.SmbClient
 import com.silversky.core.smb.SmbScanner
@@ -21,9 +20,7 @@ class Cli(private val logger: Logger) {
   private var share: String? = null
   private var currentPath = ""
   private var openedFile: SmbFile? = null
-
-  private val classifier = TokenClassifier()
-  private val parser = FilenameParser(classifier)
+  private val parser = FilenameParser()
 
   fun run() {
     println("SkyWatch CLI")

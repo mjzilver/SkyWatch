@@ -72,10 +72,7 @@ object AppModule {
   @Provides
   fun provideScannedMediaDao(database: AppDatabase): ScannedMediaDao = database.scannedMediaDao()
 
-  @Provides @Singleton fun provideTokenClassifier(): TokenClassifier = TokenClassifier()
-
   @Provides
   @Singleton
-  fun provideFilenameParser(classifier: TokenClassifier): FilenameParser =
-      FilenameParser(classifier)
+  fun provideFilenameParser(): FilenameParser = FilenameParser()
 }

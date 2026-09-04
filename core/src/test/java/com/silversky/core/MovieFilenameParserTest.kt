@@ -1,13 +1,12 @@
 package com.silversky.core
 
 import com.silversky.core.parser.FilenameParser
-import com.silversky.core.parser.TokenClassifier
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class MovieFilenameParserTest {
 
-  private val parser = FilenameParser(TokenClassifier())
+  private val parser = FilenameParser()
 
   private data class TestCase(
       val filename: String,
