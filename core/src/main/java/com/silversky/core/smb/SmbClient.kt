@@ -39,8 +39,6 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
   var server: SmbServer? = null
     private set
 
-  private var username: String? = null
-  private var password: String? = null
   private var connection: Connection? = null
   private var session: Session? = null
   private var authContext: AuthenticationContext? = null
