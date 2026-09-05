@@ -27,10 +27,18 @@ import java.util.EnumSet
 import java.util.concurrent.ExecutionException
 
 class SmbClient(private val logger: Logger) : AutoCloseable {
+    private companion object {
+        const val SOCKET_TIMEOUT_MS = 5_000L
+    }
+
   private val client =
       SMBClient(
           SmbConfig.builder()
               .withReadBufferSize(1024 * 1024)
+              .withReadTimeout(SOCKET_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+              .withWriteTimeout(SOCKET_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+              .withTransactTimeout(SOCKET_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+              .withSoTimeout(SOCKET_TIMEOUT_MS, TimeUnit.MILLISECONDS)
               .withSecurityProvider(JceSecurityProvider())
               .build()
       )
@@ -46,7 +54,6 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
   private var authContext: AuthenticationContext? = null
 
   private val shares = mutableMapOf<String, DiskShare>()
-  private val maxRetries = 3
 
   fun connect(
       server: SmbServer,
@@ -253,9 +260,6 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
   private fun <T> withReconnectRetry(
       operation: () -> T,
   ): T {
-    var lastException: Exception? = null
-
-    repeat(maxRetries) { attempt ->
       try {
         return operation()
       } catch (e: Exception) {
@@ -264,43 +268,22 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
           throw InterruptedIOException("SMB operation interrupted")
         }
 
-        lastException = e
+            logger.warn("SMB operation failed, reconnecting: ${e.message}")
 
-        if (attempt == maxRetries - 1) {
-          logger.error(
-              "SMB operation failed after 5 attempts",
-              e,
-          )
-          throw e
-        }
+            reconnect()
 
-        val delay = 200L * attempt
-
-        logger.warn("SMB operation failed " + "(attempt ${attempt + 1}/5): ${e.message}")
-
-        try {
-          Thread.sleep(delay)
-        } catch (e: InterruptedException) {
-          Thread.currentThread().interrupt()
-          throw e
-        }
-
-        try {
-          reconnect()
+            try {
+                return operation()
         } catch (e: Exception) {
           if (isInterrupted(e)) {
             Thread.currentThread().interrupt()
-            throw InterruptedIOException("SMB reconnect interrupted")
+                    throw InterruptedIOException("SMB operation interrupted")
           }
 
-          lastException = e
-
-          logger.warn("Reconnect failed: ${e.message}")
+                logger.error("SMB operation failed after reconnect", e)
+                throw e
+            }
         }
-      }
-    }
-
-    throw lastException ?: IllegalStateException("SMB operation failed")
   }
 
   private fun reconnect() {
@@ -435,8 +418,6 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
       invalidateConnectionLocked()
 
       server = null
-      username = null
-      password = null
     }
   }
 
