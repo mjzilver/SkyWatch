@@ -8,14 +8,20 @@ import com.silversky.core.model.SmbEntry
 import com.silversky.core.model.SmbEntryType
 import com.silversky.core.model.SmbServer
 import com.silversky.core.smb.SmbClient
+import com.silversky.skywatch.error.AppErrorEvent
+import com.silversky.skywatch.error.AppErrorReporter
 import com.silversky.skywatch.model.BrowserTab
 import com.silversky.skywatch.model.SavedServer
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 sealed interface ConnectionState {
@@ -36,6 +42,19 @@ constructor(
 ) {
   private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
   val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
+
+  private val lifecycleScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+  init {
+    lifecycleScope.launch {
+      AppErrorReporter.events.collectLatest { event ->
+        when (event) {
+          is AppErrorEvent.ConnectionLost,
+          is AppErrorEvent.Unhandled -> disconnect()
+        }
+      }
+    }
+  }
 
   var smbClient by mutableStateOf<SmbClient?>(null)
     private set
@@ -62,7 +81,13 @@ constructor(
         disconnect()
         _connectionState.value = ConnectionState.Connecting
 
-        val client = SmbClient(logger)
+        val client =
+            SmbClient(
+                logger = logger,
+                onConnectionLost = { serverName ->
+                  AppErrorReporter.report(AppErrorEvent.ConnectionLost(serverName))
+                },
+            )
         try {
           if (savedServer.isGuest) {
             client.connectAsGuest(server = savedServer.server)

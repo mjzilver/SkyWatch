@@ -26,7 +26,11 @@ import java.io.InterruptedIOException
 import java.util.EnumSet
 import java.util.concurrent.ExecutionException
 
-class SmbClient(private val logger: Logger) : AutoCloseable {
+class SmbClient(
+    private val logger: Logger,
+    private val onConnectionLost: ((String) -> Unit)? = null,
+    private val onUnexpectedError: ((Throwable) -> Unit)? = null,
+) : AutoCloseable {
   private val client =
       SMBClient(
           SmbConfig.builder()
@@ -106,6 +110,7 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
   fun ensureConnected() {
     synchronized(connectionLock) {
       if (connection != null && session != null) {
+        logger.warn("No connection or sesssion")
         return
       }
 
@@ -212,6 +217,10 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
               "SMB FILE OPEN FAILED: //$shareName/$path",
               e,
           )
+          if (isClosedShareError(e)) {
+            reportConnectionLost(server)
+            onUnexpectedError?.invoke(e)
+          }
           throw e
         }
       }
@@ -337,9 +346,27 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
           "Failed to connect to " + "${server.name ?: server.ipAddress}: ${e.message}",
           e,
       )
-
+      reportConnectionLost(server)
+      onUnexpectedError?.invoke(e)
       throw e
     }
+  }
+
+  private fun reportConnectionLost(server: SmbServer? = this.server) {
+    val serverName = server?.name?.ifBlank { null } ?: server?.ipAddress ?: "unknown server"
+    onConnectionLost?.invoke(serverName)
+  }
+
+  private fun isClosedShareError(throwable: Throwable): Boolean {
+    val message = throwable.message ?: return false
+    val text = throwable.toString() + " " + message
+
+    return text.contains("DiskShare has already been closed", ignoreCase = true) ||
+        text.contains("Share has already been closed", ignoreCase = true) ||
+        text.contains("connection closed", ignoreCase = true) ||
+        text.contains("Timeout expired", ignoreCase = true) ||
+        text.contains("TimeoutException", ignoreCase = true) ||
+        text.contains("TransportException", ignoreCase = true)
   }
 
   private fun invalidateConnectionLocked() {

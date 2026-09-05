@@ -20,7 +20,6 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import com.silversky.skywatch.ui.component.EmptyMessage
-import com.silversky.skywatch.ui.component.ErrorMessage
 import com.silversky.skywatch.ui.component.LoadingMessage
 import com.silversky.skywatch.ui.component.ScreenHeader
 import com.silversky.skywatch.ui.viewmodel.SharesViewModel
@@ -34,7 +33,6 @@ fun ShareScreen(
 ) {
   val shares = viewModel.shares
   val loading = viewModel.loading
-  val error = viewModel.error
   val server = viewModel.server
 
   BackHandler {
@@ -61,10 +59,6 @@ fun ShareScreen(
 
       loading -> {
         LoadingMessage("Loading shares...")
-      }
-
-      error != null -> {
-        ErrorMessage(error)
       }
 
       shares.isEmpty() -> {

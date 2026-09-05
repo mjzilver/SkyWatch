@@ -29,6 +29,8 @@ import com.silversky.skywatch.data.local.SubtitleStore
 import com.silversky.skywatch.data.remote.SmbConnectionManager
 import com.silversky.skywatch.data.repository.SettingsRepository
 import com.silversky.skywatch.data.repository.SubtitleRepository
+import com.silversky.skywatch.error.AppErrorEvent
+import com.silversky.skywatch.error.AppErrorReporter
 import com.silversky.skywatch.player.SubtitleCue
 import com.silversky.skywatch.player.SubtitleParser
 import com.silversky.skywatch.player.createSmbPlayer
@@ -64,7 +66,7 @@ constructor(
   val player: ExoPlayer =
       createSmbPlayer(
           context,
-          connectionManager.smbClient!!,
+          connectionManager.smbClient,
           logger,
       )
 
@@ -142,10 +144,15 @@ constructor(
     get() = connectionManager.selectedFile
 
   init {
-    setupPlayer()
-    startPlayback()
-    startStateUpdates()
-    startAutoSave()
+    if (connectionManager.smbClient == null) {
+      loading = false
+      error = "Connection to server was lost."
+    } else {
+      setupPlayer()
+      startPlayback()
+      startStateUpdates()
+      startAutoSave()
+    }
   }
 
   private fun setupPlayer() {
@@ -333,6 +340,17 @@ constructor(
         loading = false
       } catch (e: Exception) {
         logger.error("Failed to start playback: ${smbFile.name}", e)
+        if (isClosedShareError(e)) {
+          connectionManager.clearFile()
+          connectionManager.clearShare()
+          AppErrorReporter.report(
+              AppErrorEvent.ConnectionLost(
+                  client.server?.name ?: client.server?.ipAddress ?: "server"
+              )
+          )
+          return@launch
+        }
+
         loading = false
         error = e.message ?: "Failed to start playback"
       }
@@ -524,6 +542,18 @@ constructor(
   fun clearExternalSubtitles() {
     externalSubtitles = null
     externalSubtitleName = null
+  }
+
+  private fun isClosedShareError(throwable: Throwable): Boolean {
+    val message = throwable.message ?: return false
+    val text = throwable.toString() + " " + message
+
+    return text.contains("DiskShare has already been closed", ignoreCase = true) ||
+        text.contains("Share has already been closed", ignoreCase = true) ||
+        text.contains("connection closed", ignoreCase = true) ||
+        text.contains("Timeout expired", ignoreCase = true) ||
+        text.contains("TimeoutException", ignoreCase = true) ||
+        text.contains("TransportException", ignoreCase = true)
   }
 
   fun back(onBack: () -> Unit) {

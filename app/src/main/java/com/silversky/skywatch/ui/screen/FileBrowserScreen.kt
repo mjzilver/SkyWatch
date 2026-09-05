@@ -33,7 +33,6 @@ import com.silversky.core.model.SmbEntryType
 import com.silversky.skywatch.data.local.PlaybackState
 import com.silversky.skywatch.model.BrowserTab
 import com.silversky.skywatch.ui.component.EmptyMessage
-import com.silversky.skywatch.ui.component.ErrorMessage
 import com.silversky.skywatch.ui.component.LoadingMessage
 import com.silversky.skywatch.ui.component.MovieVersionDialog
 import com.silversky.skywatch.ui.component.PlaybackStatus
@@ -54,7 +53,6 @@ fun FileBrowserScreen(
   val entries = viewModel.entries
   val resumeEntries = viewModel.resumeEntries
   val loading = viewModel.loading
-  val error = viewModel.error
   val currentPath = viewModel.currentPath
   val shareName = viewModel.shareName ?: ""
 
@@ -106,10 +104,6 @@ fun FileBrowserScreen(
         when {
           loading -> {
             LoadingMessage()
-          }
-
-          error != null -> {
-            ErrorMessage(error)
           }
 
           entries.isEmpty() -> {

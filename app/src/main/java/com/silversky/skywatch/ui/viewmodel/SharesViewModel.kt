@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.silversky.core.logger.Logger
 import com.silversky.core.model.SmbEntry
 import com.silversky.skywatch.data.remote.SmbConnectionManager
+import com.silversky.skywatch.error.AppErrorEvent
+import com.silversky.skywatch.error.AppErrorReporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -53,8 +55,10 @@ constructor(
         }
       } catch (e: Exception) {
         logger.error("Failed to list SMB shares", e)
+        AppErrorReporter.report(
+            AppErrorEvent.ConnectionLost(server?.name ?: server?.ipAddress ?: "server")
+        )
         withContext(Dispatchers.Main) {
-          error = e.message ?: "Failed to load shares"
           loading = false
         }
       }

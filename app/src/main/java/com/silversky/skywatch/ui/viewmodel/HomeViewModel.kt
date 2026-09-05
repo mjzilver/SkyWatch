@@ -29,8 +29,6 @@ sealed interface DialogState {
   data class DeleteConfirmation(val server: SavedServer) : DialogState
 
   data object Scan : DialogState
-
-  data class Error(val message: String) : DialogState
 }
 
 @HiltViewModel
@@ -77,11 +75,6 @@ constructor(
       connectingServer = null
       if (connectionManager.connectionState.value is ConnectionState.Connected) {
         onConnected()
-      } else if (connectionManager.connectionState.value is ConnectionState.Error) {
-        dialog =
-            DialogState.Error(
-                (connectionManager.connectionState.value as ConnectionState.Error).message
-            )
       }
     }
   }

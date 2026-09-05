@@ -112,9 +112,13 @@ suspend fun prepareSmbMediaItem(
 @OptIn(UnstableApi::class)
 fun createSmbPlayer(
     context: Context,
-    smbClient: SmbClient,
+    smbClient: SmbClient?,
     logger: Logger,
 ): ExoPlayer {
+  if (smbClient == null) {
+    return ExoPlayer.Builder(context).build()
+  }
+
   val trackSelector = DefaultTrackSelector(context)
 
   val loadControl =
