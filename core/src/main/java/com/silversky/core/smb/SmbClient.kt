@@ -27,18 +27,10 @@ import java.util.EnumSet
 import java.util.concurrent.ExecutionException
 
 class SmbClient(private val logger: Logger) : AutoCloseable {
-    private companion object {
-        const val SOCKET_TIMEOUT_MS = 5_000L
-    }
-
   private val client =
       SMBClient(
           SmbConfig.builder()
               .withReadBufferSize(1024 * 1024)
-              .withReadTimeout(SOCKET_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-              .withWriteTimeout(SOCKET_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-              .withTransactTimeout(SOCKET_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-              .withSoTimeout(SOCKET_TIMEOUT_MS, TimeUnit.MILLISECONDS)
               .withSecurityProvider(JceSecurityProvider())
               .build()
       )
@@ -260,6 +252,18 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
   private fun <T> withReconnectRetry(
       operation: () -> T,
   ): T {
+    try {
+      return operation()
+    } catch (e: Exception) {
+      if (isInterrupted(e)) {
+        Thread.currentThread().interrupt()
+        throw InterruptedIOException("SMB operation interrupted")
+      }
+
+      logger.warn("SMB operation failed, reconnecting: ${e.message}")
+
+      reconnect()
+
       try {
         return operation()
       } catch (e: Exception) {
@@ -268,22 +272,10 @@ class SmbClient(private val logger: Logger) : AutoCloseable {
           throw InterruptedIOException("SMB operation interrupted")
         }
 
-            logger.warn("SMB operation failed, reconnecting: ${e.message}")
-
-            reconnect()
-
-            try {
-                return operation()
-        } catch (e: Exception) {
-          if (isInterrupted(e)) {
-            Thread.currentThread().interrupt()
-                    throw InterruptedIOException("SMB operation interrupted")
-          }
-
-                logger.error("SMB operation failed after reconnect", e)
-                throw e
-            }
-        }
+        logger.error("SMB operation failed after reconnect", e)
+        throw e
+      }
+    }
   }
 
   private fun reconnect() {
