@@ -359,7 +359,7 @@ class SmbClient(
 
   private fun isClosedShareError(throwable: Throwable): Boolean {
     val message = throwable.message ?: return false
-    val text = throwable.toString() + " " + message
+    val text = "$throwable $message"
 
     return text.contains("DiskShare has already been closed", ignoreCase = true) ||
         text.contains("Share has already been closed", ignoreCase = true) ||

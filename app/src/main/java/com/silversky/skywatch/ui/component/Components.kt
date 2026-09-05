@@ -47,15 +47,6 @@ fun LoadingMessage(message: String = "Loading...") {
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun ErrorMessage(message: String) {
-  Text(
-      text = message,
-      style = MaterialTheme.typography.bodyLarge,
-  )
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
 fun ScreenHeader(
     title: String,
     subtitle: String? = null,
