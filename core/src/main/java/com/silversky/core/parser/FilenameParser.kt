@@ -125,28 +125,37 @@ class FilenameParser {
       val (title, year) = parseTitleAndYear(titlePart)
       val (episodeName, edition) = parseMetadata(restPart)
 
-      episodes.map { episode ->
-        EpisodeInfo(
-            title = title,
-            year = year,
-            season = season,
-            episode = episode,
-            episodeName = episodeName,
-            edition = edition,
-            entryPath = path,
-        )
+      if (!isSensibleTitle(title)) {
+        emptyList()
+      } else {
+        episodes.map { episode ->
+          EpisodeInfo(
+              title = title,
+              year = year,
+              season = season,
+              episode = episode,
+              episodeName = episodeName,
+              edition = edition,
+              entryPath = path,
+          )
+        }
       }
     } else {
       val (title, year) = parseTitleAndYear(name)
       val (_, edition) = parseMetadata(name)
-      listOf(
-          MovieInfo(
-              title = title,
-              year = year,
-              edition = edition,
-              entryPath = path,
-          )
-      )
+
+      if (!isSensibleTitle(title)) {
+        emptyList()
+      } else {
+        listOf(
+            MovieInfo(
+                title = title,
+                year = year,
+                edition = edition,
+                entryPath = path,
+            )
+        )
+      }
     }
   }
 
@@ -205,5 +214,22 @@ class FilenameParser {
 
     val episodeName = extraTokens.joinToString(" ").ifBlank { null }
     return episodeName to edition
+  }
+
+  private fun isSensibleTitle(title: String): Boolean {
+    val normalized = title.trim()
+
+    if (normalized.isBlank()) return false
+
+    if (normalized.matches(Regex("""[SE]\d+""", RegexOption.IGNORE_CASE))) {
+      return false
+    }
+
+    // A title consisting entirely of numbers isn't useful.
+    if (normalized.all { it.isDigit() }) {
+      return false
+    }
+
+    return true
   }
 }
