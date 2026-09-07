@@ -3,13 +3,16 @@ package com.silversky.skywatch.ui.component
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,12 +21,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.silversky.skywatch.error.AppError
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -159,5 +164,71 @@ fun TvTextField(
                     vertical = 12.dp,
                 ),
     )
+  }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun AppErrorOverlay(
+    error: AppError,
+    onClose: () -> Unit,
+) {
+  val closeFocus = remember {
+    FocusRequester()
+  }
+
+  LaunchedEffect(Unit) {
+    closeFocus.requestFocus()
+  }
+
+  Box(
+      modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.90f)),
+      contentAlignment = Alignment.Center,
+  ) {
+    Column(
+        modifier =
+            Modifier.fillMaxWidth(0.65f)
+                .background(
+                    Color(0xFF202020),
+                    RoundedCornerShape(16.dp),
+                )
+                .padding(
+                    horizontal = 40.dp,
+                    vertical = 32.dp,
+                ),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+      Text(
+          text = "Error Occurred",
+          style = MaterialTheme.typography.headlineSmall,
+          color = Color.White,
+      )
+
+      Spacer(modifier = Modifier.height(16.dp))
+
+      Text(
+          text = error.userMessage,
+          style = MaterialTheme.typography.bodyLarge,
+          color = Color.LightGray,
+      )
+
+      if (error.technicalMessage.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = error.technicalMessage,
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.Gray.copy(alpha = 0.8f),
+        )
+      }
+
+      Spacer(modifier = Modifier.height(28.dp))
+
+      Button(
+          onClick = onClose,
+          modifier = Modifier.focusRequester(closeFocus),
+      ) {
+        Text("Close")
+      }
+    }
   }
 }

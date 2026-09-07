@@ -19,6 +19,7 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
+import com.silversky.skywatch.ui.component.AppErrorOverlay
 import com.silversky.skywatch.ui.component.EmptyMessage
 import com.silversky.skywatch.ui.component.LoadingMessage
 import com.silversky.skywatch.ui.component.ScreenHeader
@@ -86,6 +87,13 @@ fun ShareScreen(
           }
         }
       }
+    }
+
+    viewModel.error?.let { error ->
+      AppErrorOverlay(
+          error = error,
+          onClose = { onBack() },
+      )
     }
   }
 }

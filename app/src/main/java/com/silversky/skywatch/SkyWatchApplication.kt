@@ -1,8 +1,9 @@
 package com.silversky.skywatch
 
 import android.app.Application
-import com.silversky.skywatch.error.AppErrorEvent
+import com.silversky.skywatch.error.AppErrorEvent.Unhandled
 import com.silversky.skywatch.error.AppErrorReporter
+import com.silversky.skywatch.error.toAppError
 import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
@@ -12,12 +13,7 @@ class SkyWatchApplication : Application() {
 
     val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
     Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-      AppErrorReporter.report(
-          AppErrorEvent.Unhandled(
-              message = throwable.message ?: "An unexpected error occurred",
-              throwable = throwable,
-          )
-      )
+      AppErrorReporter.report(Unhandled(throwable.toAppError()))
       defaultHandler?.uncaughtException(thread, throwable)
     }
   }

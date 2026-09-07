@@ -8,8 +8,10 @@ import androidx.lifecycle.viewModelScope
 import com.silversky.core.logger.Logger
 import com.silversky.core.model.SmbEntry
 import com.silversky.skywatch.data.remote.SmbConnectionManager
+import com.silversky.skywatch.error.AppError
 import com.silversky.skywatch.error.AppErrorEvent
 import com.silversky.skywatch.error.AppErrorReporter
+import com.silversky.skywatch.error.toAppError
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +32,7 @@ constructor(
   var loading by mutableStateOf(false)
     private set
 
-  var error by mutableStateOf<String?>(null)
+  var error by mutableStateOf<AppError?>(null)
     private set
 
   val client
@@ -55,10 +57,15 @@ constructor(
         }
       } catch (e: Exception) {
         logger.error("Failed to list SMB shares", e)
+        val appError = e.toAppError("Could not connect to the server or list shares.")
         AppErrorReporter.report(
-            AppErrorEvent.ConnectionLost(server?.name ?: server?.ipAddress ?: "server")
+            AppErrorEvent.ConnectionLost(
+                serverName = server?.name ?: server?.ipAddress ?: "server",
+                technicalDetails = appError.technicalMessage,
+            )
         )
         withContext(Dispatchers.Main) {
+          error = appError
           loading = false
         }
       }

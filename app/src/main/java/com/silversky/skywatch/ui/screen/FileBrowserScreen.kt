@@ -32,6 +32,7 @@ import com.silversky.core.model.SmbEntry
 import com.silversky.core.model.SmbEntryType
 import com.silversky.skywatch.data.local.PlaybackState
 import com.silversky.skywatch.model.BrowserTab
+import com.silversky.skywatch.ui.component.AppErrorOverlay
 import com.silversky.skywatch.ui.component.EmptyMessage
 import com.silversky.skywatch.ui.component.LoadingMessage
 import com.silversky.skywatch.ui.component.MovieVersionDialog
@@ -210,6 +211,13 @@ fun FileBrowserScreen(
                 onFileSelected,
             )
           },
+      )
+    }
+
+    viewModel.error?.let { error ->
+      AppErrorOverlay(
+          error = error,
+          onClose = { onBack() },
       )
     }
   }

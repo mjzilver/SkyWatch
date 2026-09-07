@@ -7,7 +7,10 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,8 +22,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.silversky.skywatch.error.AppError
 import com.silversky.skywatch.error.AppErrorEvent
 import com.silversky.skywatch.error.AppErrorReporter
+import com.silversky.skywatch.ui.component.AppErrorOverlay
 import com.silversky.skywatch.ui.component.ScanDialog
 import com.silversky.skywatch.ui.component.ServerDialog
 import com.silversky.skywatch.ui.component.SkyWatchDialog
@@ -54,6 +59,7 @@ object Routes {
 fun SkyWatchApp() {
   val navController = rememberNavController()
   val snackbarHostState = remember { SnackbarHostState() }
+  var globalError by remember { mutableStateOf<AppError?>(null) }
 
   LaunchedEffect(Unit) {
     AppErrorReporter.events.collect { event ->
@@ -65,8 +71,14 @@ fun SkyWatchApp() {
               launchSingleTop = true
             }
           }
-          snackbarHostState.showSnackbar("Connection to server ${event.serverName} lost")
+
+          globalError =
+              AppError(
+                  userMessage = "Connection to server ${event.serverName} lost",
+                  technicalMessage = event.technicalDetails ?: "Network connection closed",
+              )
         }
+
         is AppErrorEvent.Unhandled -> {
           if (navController.currentBackStackEntry?.destination?.route != Routes.HOME) {
             navController.navigate(Routes.HOME) {
@@ -74,7 +86,7 @@ fun SkyWatchApp() {
               launchSingleTop = true
             }
           }
-          snackbarHostState.showSnackbar(event.message)
+          globalError = event.error
         }
       }
     }
@@ -223,5 +235,12 @@ fun SkyWatchApp() {
         hostState = snackbarHostState,
         modifier = Modifier.align(Alignment.BottomCenter),
     )
+
+    globalError?.let { error ->
+      AppErrorOverlay(
+          error = error,
+          onClose = { globalError = null },
+      )
+    }
   }
 }

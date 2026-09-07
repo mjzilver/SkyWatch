@@ -16,8 +16,10 @@ import com.silversky.skywatch.data.local.PlaybackStateStore
 import com.silversky.skywatch.data.remote.SmbConnectionManager
 import com.silversky.skywatch.data.repository.MediaRepository
 import com.silversky.skywatch.data.repository.SettingsRepository
+import com.silversky.skywatch.error.AppError
 import com.silversky.skywatch.error.AppErrorEvent
 import com.silversky.skywatch.error.AppErrorReporter
+import com.silversky.skywatch.error.toAppError
 import com.silversky.skywatch.model.BrowserTab
 import com.silversky.skywatch.model.SortBy
 import com.silversky.skywatch.model.SortOrder
@@ -77,7 +79,7 @@ constructor(
   var loading by mutableStateOf(false)
     private set
 
-  var error by mutableStateOf<String?>(null)
+  var error by mutableStateOf<AppError?>(null)
     private set
 
   val client
@@ -119,10 +121,15 @@ constructor(
         }
       } catch (e: Exception) {
         logger.error("Failed to list //$shareName/$currentPath", e)
+        val appError = e.toAppError("Could not list files on the server.")
         AppErrorReporter.report(
-            AppErrorEvent.ConnectionLost(server?.name ?: server?.ipAddress ?: shareName)
+            AppErrorEvent.ConnectionLost(
+                serverName = server?.name ?: server?.ipAddress ?: shareName,
+                technicalDetails = appError.technicalMessage,
+            )
         )
         withContext(Dispatchers.Main) {
+          error = appError
           rawEntries = emptyList()
           entries = emptyList()
           loading = false

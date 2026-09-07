@@ -26,9 +26,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import androidx.tv.material3.Text
+import com.silversky.skywatch.ui.component.AppErrorOverlay
 import com.silversky.skywatch.ui.component.AudioTrackDialog
 import com.silversky.skywatch.ui.component.DebugInfoDialog
-import com.silversky.skywatch.ui.component.PlaybackErrorOverlay
 import com.silversky.skywatch.ui.component.PlayerControls
 import com.silversky.skywatch.ui.component.SpeedDialog
 import com.silversky.skywatch.ui.component.SubtitleDialog
@@ -208,8 +208,8 @@ fun PlayerScreen(
     }
 
     if (error != null) {
-      PlaybackErrorOverlay(
-          message = error,
+      AppErrorOverlay(
+          error = error,
           onClose = { viewModel.back(onBack) },
       )
     }

@@ -29,8 +29,10 @@ import com.silversky.skywatch.data.local.SubtitleStore
 import com.silversky.skywatch.data.remote.SmbConnectionManager
 import com.silversky.skywatch.data.repository.SettingsRepository
 import com.silversky.skywatch.data.repository.SubtitleRepository
+import com.silversky.skywatch.error.AppError
 import com.silversky.skywatch.error.AppErrorEvent
 import com.silversky.skywatch.error.AppErrorReporter
+import com.silversky.skywatch.error.toAppError
 import com.silversky.skywatch.player.SubtitleCue
 import com.silversky.skywatch.player.SubtitleParser
 import com.silversky.skywatch.player.createSmbPlayer
@@ -73,7 +75,7 @@ constructor(
   var loading by mutableStateOf(true)
     private set
 
-  var error by mutableStateOf<String?>(null)
+  var error by mutableStateOf<AppError?>(null)
     private set
 
   var controlsVisible by mutableStateOf(true)
@@ -146,7 +148,11 @@ constructor(
   init {
     if (connectionManager.smbClient == null) {
       loading = false
-      error = "Connection to server was lost."
+      error =
+          AppError(
+              userMessage = "Connection to server was lost.",
+              technicalMessage = "SmbClient is null in PlayerViewModel init",
+          )
     } else {
       setupPlayer()
       startPlayback()
@@ -248,22 +254,7 @@ constructor(
 
           override fun onPlayerError(playbackException: PlaybackException) {
             logger.error("PLAYER ERROR: ${playbackException.errorCodeName}", playbackException)
-
-            error =
-                when (playbackException.errorCode) {
-                  PlaybackException.ERROR_CODE_DECODING_FAILED ->
-                      "This video uses a video format or codec that your device cannot decode."
-                  PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED ->
-                      "This video format is not supported by your device."
-                  PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ->
-                      "The video file appears to be damaged or malformed."
-                  PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ->
-                      "The network connection to the SMB server was lost."
-                  PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ->
-                      "The connection to the SMB server timed out."
-                  else -> playbackException.message ?: "An unexpected playback error occurred."
-                }
-
+            error = playbackException.toAppError()
             loading = false
             controlsVisible = false
           }
@@ -352,7 +343,7 @@ constructor(
         }
 
         loading = false
-        error = e.message ?: "Failed to start playback"
+        error = e.toAppError()
       }
     }
   }

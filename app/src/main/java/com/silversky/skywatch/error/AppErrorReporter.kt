@@ -6,9 +6,10 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 sealed interface AppErrorEvent {
-  data class ConnectionLost(val serverName: String) : AppErrorEvent
+  data class ConnectionLost(val serverName: String, val technicalDetails: String? = null) :
+      AppErrorEvent
 
-  data class Unhandled(val message: String, val throwable: Throwable? = null) : AppErrorEvent
+  data class Unhandled(val error: AppError) : AppErrorEvent
 }
 
 object AppErrorReporter {

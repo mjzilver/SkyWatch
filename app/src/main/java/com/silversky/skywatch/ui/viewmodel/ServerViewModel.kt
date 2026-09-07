@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.silversky.core.logger.Logger
 import com.silversky.core.model.SmbServer
 import com.silversky.skywatch.data.repository.ServerRepository
+import com.silversky.skywatch.error.AppError
+import com.silversky.skywatch.error.toAppError
 import com.silversky.skywatch.model.SavedServer
 import com.silversky.skywatch.ui.component.ServerConnectionInput
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,7 +27,7 @@ constructor(
   var isSaving by mutableStateOf(false)
     private set
 
-  var error by mutableStateOf<String?>(null)
+  var error by mutableStateOf<AppError?>(null)
     private set
 
   fun saveServer(
@@ -50,7 +52,7 @@ constructor(
         onSuccess()
       } catch (e: Exception) {
         logger.error("Failed to save server", e)
-        error = e.message ?: "Failed to save server"
+        error = e.toAppError("Failed to save server settings.")
       } finally {
         isSaving = false
       }

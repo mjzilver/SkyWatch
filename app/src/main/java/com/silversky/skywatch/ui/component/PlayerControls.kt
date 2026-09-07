@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Slider
@@ -51,60 +50,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-
-@Composable
-internal fun PlaybackErrorOverlay(
-    message: String,
-    onClose: () -> Unit,
-) {
-  val closeFocus = remember {
-    FocusRequester()
-  }
-
-  LaunchedEffect(Unit) {
-    closeFocus.requestFocus()
-  }
-
-  Box(
-      modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.90f)),
-      contentAlignment = Alignment.Center,
-  ) {
-    Column(
-        modifier =
-            Modifier.fillMaxWidth(0.65f)
-                .background(
-                    Color(0xFF202020),
-                    RoundedCornerShape(16.dp),
-                )
-                .padding(
-                    horizontal = 40.dp,
-                    vertical = 32.dp,
-                ),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-      Text(
-          text = "Playback failed",
-          color = Color.White,
-      )
-
-      Spacer(modifier = Modifier.height(16.dp))
-
-      Text(
-          text = message,
-          color = Color.LightGray,
-      )
-
-      Spacer(modifier = Modifier.height(28.dp))
-
-      Button(
-          onClick = onClose,
-          modifier = Modifier.focusRequester(closeFocus),
-      ) {
-        Text("Close")
-      }
-    }
-  }
-}
 
 @Composable
 internal fun PlayerControls(
