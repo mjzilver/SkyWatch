@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,8 +55,15 @@ fun PlayerScreen(
   val subtitleOffset = viewModel.subtitleOffset
   val settings by viewModel.settingsRepository.settings.collectAsStateWithLifecycle()
 
+  var controlsActivity by remember { mutableIntStateOf(0) }
+
+  fun registerActivity() {
+    controlsActivity++
+    viewModel.controlsVisible = true
+  }
+
   LaunchedEffect(
-      viewModel.controlsVisible,
+      controlsActivity,
       viewModel.showAudioMenu,
       viewModel.showSubtitleMenu,
       viewModel.showSpeedMenu,
@@ -123,14 +133,15 @@ fun PlayerScreen(
             when (event.key) {
               Key.DirectionCenter,
               Key.Enter -> {
-                viewModel.controlsVisible = true
+                registerActivity()
                 true
               }
 
               Key.DirectionLeft -> {
+                registerActivity()
+
                 if (!viewModel.controlsVisible) {
                   player.seekBack()
-                  viewModel.controlsVisible = true
                   true
                 } else {
                   false
@@ -138,9 +149,10 @@ fun PlayerScreen(
               }
 
               Key.DirectionRight -> {
+                registerActivity()
+
                 if (!viewModel.controlsVisible) {
                   player.seekForward()
-                  viewModel.controlsVisible = true
                   true
                 } else {
                   false
@@ -157,9 +169,11 @@ fun PlayerScreen(
           PlayerView(viewContext).apply {
             useController = false
             setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
               focusable = View.FOCUSABLE
             }
+
             isFocusableInTouchMode = true
 
             subtitleView?.apply {
@@ -219,25 +233,32 @@ fun PlayerScreen(
           duration = duration,
           isPlaying = isPlaying,
           showLowBandwidthWarning = viewModel.showLowBandwidthWarning,
-          onPlay = { viewModel.togglePlay() },
-          onAudio = {
-            viewModel.showAudioMenu = true
-            viewModel.controlsVisible = true
+          onPlay = {
+            registerActivity()
+            viewModel.togglePlay()
           },
-          onStop = { viewModel.back(onBack) },
+          onAudio = {
+            registerActivity()
+            viewModel.showAudioMenu = true
+          },
+          onStop = {
+            viewModel.back(onBack)
+          },
           onSubtitles = {
+            registerActivity()
             viewModel.showSubtitleMenu = true
-            viewModel.controlsVisible = true
           },
           onSpeed = {
+            registerActivity()
             viewModel.showSpeedMenu = true
-            viewModel.controlsVisible = true
           },
           onDebugInfo = {
+            registerActivity()
             viewModel.showDebugMenu = true
-            viewModel.controlsVisible = true
           },
-          onHideControls = { viewModel.controlsVisible = false },
+          onHideControls = {
+            viewModel.controlsVisible = false
+          },
       )
     }
 
@@ -269,12 +290,20 @@ fun PlayerScreen(
           subtitleOffset = subtitleOffset,
           externalSubtitleName = viewModel.externalSubtitleName,
           onOffsetChange = { viewModel.updateSubtitleOffset(it) },
-          onClearExternalSubtitles = { viewModel.clearExternalSubtitles() },
+          onClearExternalSubtitles = {
+            viewModel.clearExternalSubtitles()
+          },
           onDownloadSubtitle = { subtitle ->
-            viewModel.downloadAndLoadSubtitle(subtitle.id, subtitle.name)
+            viewModel.downloadAndLoadSubtitle(
+                subtitle.id,
+                subtitle.name,
+            )
           },
           onSelectCachedSubtitle = { cached ->
-            viewModel.loadCachedSubtitle(cached.name, cached.content)
+            viewModel.loadCachedSubtitle(
+                cached.name,
+                cached.content,
+            )
           },
           onDismiss = {
             viewModel.savePlaybackState()
