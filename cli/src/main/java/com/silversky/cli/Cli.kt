@@ -264,10 +264,15 @@ class Cli(private val logger: Logger) {
               println("SERIES: $title$year")
               items
                   .filterIsInstance<EpisodeInfo>()
-                  .sortedWith(compareBy({ it.season }, { it.episode }))
+                  .sortedWith(compareBy({ it.season }, { it.episodes.firstOrNull() }))
                   .forEach { ep ->
+                    val episodes =
+                        ep.episodes.joinToString("E") {
+                          it.toString().padStart(2, '0')
+                        }
+
                     println(
-                        "  S${ep.season.toString().padStart(2, '0')}E${ep.episode.toString().padStart(2, '0')} - ${ep.entryPath}"
+                        "  S${ep.season.toString().padStart(2, '0')}E$episodes - ${ep.entryPath}"
                     )
                   }
             }

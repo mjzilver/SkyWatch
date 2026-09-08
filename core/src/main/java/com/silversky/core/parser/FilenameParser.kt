@@ -299,12 +299,13 @@ class FilenameParser {
     const val PATH_DEPTH_PENALTY = 0.10
 
     val WHITESPACE = Regex("""\s+""")
-    val TOKEN_DELIMITERS = Regex("""[.\s_]""")
+    val TOKEN_DELIMITERS = Regex("""[.\s_+]""")
     val EPISODE_SPLIT_PATTERN = Regex("""[e&-]""", RegexOption.IGNORE_CASE)
     val SEASON_PATTERN = Regex("""^S\d{1,3}$|^Season$|^Season\d{1,3}$""", RegexOption.IGNORE_CASE)
     val TLD_PATTERN = Regex("""\.(com|org|net|tv|me|io|info|biz)$""", RegexOption.IGNORE_CASE)
     val SHORT_SEASON_EP_PATTERN = Regex("""^S\d{1,3}(?:E\d{1,3})?$""", RegexOption.IGNORE_CASE)
-    val SEASON_FOLDER_PATTERN = Regex("""Season\s*\d+""", RegexOption.IGNORE_CASE)
+    val SEASON_FOLDER_PATTERN =
+        Regex("""^(?:Season\s*\d+|S\d+)(?:\b|.*)""", RegexOption.IGNORE_CASE)
 
     const val EPISODE_REGEX = """\d{1,3}"""
     const val EPISODE_SEQUENCE_REGEX = """$EPISODE_REGEX(?:(?:E|[&-])E?$EPISODE_REGEX)*"""

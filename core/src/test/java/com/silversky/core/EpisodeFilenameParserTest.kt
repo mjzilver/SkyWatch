@@ -201,6 +201,21 @@ class EpisodeFilenameParserTest {
   }
 
   @Test
+  fun `ignore season folders with extra text in path`() {
+    val grandparent = "Dr Who"
+    val parent = "S1+Christmas special"
+    val filename = "Doctor Who 2005 - 1x03 - The Unquiet Dead (ws_pdtv_xvid-fov.[BT]).avi"
+    val path = "$grandparent/$parent/$filename"
+
+    val results = parser.parse(filename, path)
+    assertEquals(1, results.size)
+    val episode = assertIs<EpisodeInfo>(results.first())
+    assertEquals("Dr Who", episode.title)
+    assertEquals(1, episode.season)
+    assertEquals(listOf(3), episode.episodes)
+  }
+
+  @Test
   fun `parse multi episode filenames with repeating markers`() {
     val filename = "Mr.Robot.S02E01E02.1080p.BluRay.10bit.DD5.1.x265-POIASD.mkv"
     val expectedEpisodes = listOf(1, 2)
