@@ -110,7 +110,7 @@ class SmbClient(
   fun ensureConnected() {
     synchronized(connectionLock) {
       if (connection != null && session != null) {
-        logger.warn("No connection or sesssion")
+        logger.warn("No connection or session")
         return
       }
 
