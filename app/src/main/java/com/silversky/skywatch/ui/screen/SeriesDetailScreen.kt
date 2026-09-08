@@ -57,6 +57,7 @@ fun SeriesDetailScreen(
     Spacer(modifier = Modifier.height(32.dp))
 
     val seasons = episodes.groupBy { it.season }.toSortedMap()
+    val hasMultipleSeasons = seasons.size > 1
 
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
@@ -75,37 +76,45 @@ fun SeriesDetailScreen(
               else -> PlaybackStatus.NotStarted
             }
 
-        item(key = "season_$seasonNumber") {
-          Button(
-              onClick = {
-                expandedSeason = if (expandedSeason == seasonNumber) null else seasonNumber
-              },
-              modifier = Modifier.fillMaxWidth(),
-          ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              StatusIcon(status = seasonAggregateStatus)
-              Spacer(modifier = Modifier.width(12.dp))
-              Text(text = "Season $seasonNumber")
+        if (hasMultipleSeasons) {
+          item(key = "season_$seasonNumber") {
+            Button(
+                onClick = {
+                  expandedSeason = if (expandedSeason == seasonNumber) null else seasonNumber
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                StatusIcon(status = seasonAggregateStatus)
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(text = "Season $seasonNumber")
+              }
             }
           }
         }
 
-        if (expandedSeason == seasonNumber) {
+        if (!hasMultipleSeasons || expandedSeason == seasonNumber) {
           items(
               items = seasonEpisodes,
-              key = { "ep_${it.season}_${it.episode}_${it.entryPath}" },
+              key = { "ep_${it.season}_${it.episodes.joinToString("_")}_${it.entryPath}" },
           ) { ep ->
             val status = getPlaybackStatus(viewModel.episodeStates[ep.entryPath])
 
             Button(
                 onClick = { viewModel.selectEpisode(ep, onEpisodeSelected) },
-                modifier = Modifier.padding(start = 32.dp).fillMaxWidth(),
+                modifier =
+                    Modifier.padding(start = if (hasMultipleSeasons) 32.dp else 0.dp)
+                        .fillMaxWidth(),
             ) {
               Row(verticalAlignment = Alignment.CenterVertically) {
                 StatusIcon(status = status)
                 Spacer(modifier = Modifier.width(12.dp))
                 val episodeText = buildString {
-                  append("Episode ${ep.episode}")
+                  if (ep.episodes.size > 1) {
+                    append("Episodes ${ep.episodes.joinToString(" & ")}")
+                  } else {
+                    append("Episode ${ep.episodes.firstOrNull() ?: 1}")
+                  }
                   ep.episodeName?.let { append(": $it") }
                   ep.edition?.let { append(" [${it.uppercase()}]") }
                 }

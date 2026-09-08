@@ -20,6 +20,6 @@ data class EpisodeInfo(
     override val edition: String?,
     override val entryPath: String,
     val season: Int,
-    val episode: Int,
+    val episodes: List<Int>,
     val episodeName: String? = null,
 ) : MediaInfo

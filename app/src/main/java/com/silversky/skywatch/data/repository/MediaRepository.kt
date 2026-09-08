@@ -39,7 +39,8 @@ constructor(
                 edition = entity.edition,
                 entryPath = entity.entryPath,
                 season = entity.season ?: 1,
-                episode = entity.episode ?: 1,
+                episodes =
+                    entity.episodes?.split(",")?.mapNotNull { it.toIntOrNull() } ?: listOf(1),
                 episodeName = entity.episodeName,
             )
           }
@@ -66,7 +67,7 @@ constructor(
                   year = info.year,
                   edition = info.edition,
                   season = null,
-                  episode = null,
+                  episodes = null,
                   episodeName = null,
                   isMovie = true,
               )
@@ -80,7 +81,7 @@ constructor(
                   year = info.year,
                   edition = info.edition,
                   season = info.season,
-                  episode = info.episode,
+                  episodes = info.episodes.joinToString(","),
                   episodeName = info.episodeName,
                   isMovie = false,
               )

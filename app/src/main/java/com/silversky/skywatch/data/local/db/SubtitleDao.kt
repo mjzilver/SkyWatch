@@ -14,7 +14,7 @@ interface SubtitleDao {
         WHERE title = :title 
         AND (year = :year OR (year IS NULL AND :year IS NULL))
         AND (season = :season OR (season IS NULL AND :season IS NULL))
-        AND (episode = :episode OR (episode IS NULL AND :episode IS NULL))
+        AND (episodes = :episodes OR (episodes IS NULL AND :episodes IS NULL))
         AND (edition = :edition OR (edition IS NULL AND :edition IS NULL))
     """
   )
@@ -22,7 +22,7 @@ interface SubtitleDao {
       title: String,
       year: Int?,
       season: Int?,
-      episode: Int?,
+      episodes: String?,
       edition: String?,
   ): MediaEntity?
 

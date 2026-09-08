@@ -5,7 +5,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [MediaEntity::class, SubtitleEntity::class, ScannedMediaEntity::class],
-    version = 3,
+    version = 4,
 )
 abstract class AppDatabase : RoomDatabase() {
   abstract fun subtitleDao(): SubtitleDao

@@ -75,15 +75,15 @@ constructor(
         val mediaInfo = filenameParser.parse(query).firstOrNull() ?: return@withContext null
 
         val season: Int?
-        val episode: Int?
+        val episodes: String?
         when (mediaInfo) {
           is EpisodeInfo -> {
             season = mediaInfo.season
-            episode = mediaInfo.episode
+            episodes = mediaInfo.episodes.joinToString(",")
           }
           is MovieInfo -> {
             season = null
-            episode = null
+            episodes = null
           }
         }
 
@@ -92,7 +92,7 @@ constructor(
                 mediaInfo.title,
                 mediaInfo.year,
                 season,
-                episode,
+                episodes,
                 mediaInfo.edition,
             )
 
@@ -104,7 +104,7 @@ constructor(
                 title = cachedMedia.title,
                 year = cachedMedia.year,
                 season = cachedMedia.season,
-                episode = cachedMedia.episode,
+                episodes = cachedMedia.episodes?.split(",")?.mapNotNull { it.toIntOrNull() },
                 edition = cachedMedia.edition,
                 subtitles = cachedSubtitles.map { SubtitleResult(it.id, it.name) },
             )
@@ -133,15 +133,15 @@ constructor(
               cachedMedia?.id
                   ?: UUID.randomUUID().toString().also { id ->
                     val season: Int?
-                    val episode: Int?
+                    val episodes: String?
                     when (mediaInfo) {
                       is EpisodeInfo -> {
                         season = mediaInfo.season
-                        episode = mediaInfo.episode
+                        episodes = mediaInfo.episodes.joinToString(",")
                       }
                       is MovieInfo -> {
                         season = null
-                        episode = null
+                        episodes = null
                       }
                     }
 
@@ -151,7 +151,7 @@ constructor(
                             title = mediaInfo.title,
                             year = mediaInfo.year,
                             season = season,
-                            episode = episode,
+                            episodes = episodes,
                             edition = mediaInfo.edition,
                         )
                     )
@@ -172,15 +172,15 @@ constructor(
           val finalSubtitles = subtitleDao.getSubtitlesForMedia(mediaId)
 
           val season: Int?
-          val episode: Int?
+          val episodes: List<Int>?
           when (mediaInfo) {
             is EpisodeInfo -> {
               season = mediaInfo.season
-              episode = mediaInfo.episode
+              episodes = mediaInfo.episodes
             }
             is MovieInfo -> {
               season = null
-              episode = null
+              episodes = null
             }
           }
 
@@ -188,7 +188,7 @@ constructor(
               title = mediaInfo.title,
               year = mediaInfo.year,
               season = season,
-              episode = episode,
+              episodes = episodes,
               edition = mediaInfo.edition,
               subtitles = finalSubtitles.map { SubtitleResult(it.id, it.name) },
           )

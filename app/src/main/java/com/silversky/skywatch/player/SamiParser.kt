@@ -57,7 +57,12 @@ object SamiParser : SubtitleFormatParser {
       }
 
       val nextSyncIndex = normalized.indexOf("<SYNC", tagEnd + 1, ignoreCase = true)
-      val bodyEnd = if (nextSyncIndex == -1) normalized.length else nextSyncIndex
+      val bodyCloseIndex = normalized.indexOf("</BODY>", tagEnd + 1, ignoreCase = true)
+      val samiCloseIndex = normalized.indexOf("</SAMI>", tagEnd + 1, ignoreCase = true)
+
+      var bodyEnd = if (nextSyncIndex == -1) normalized.length else nextSyncIndex
+      if (bodyCloseIndex != -1 && bodyCloseIndex < bodyEnd) bodyEnd = bodyCloseIndex
+      if (samiCloseIndex != -1 && samiCloseIndex < bodyEnd) bodyEnd = samiCloseIndex
 
       val rawText = normalized.substring(tagEnd + 1, bodyEnd).trim()
       val text = cleanSamiText(rawText)

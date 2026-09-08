@@ -13,7 +13,7 @@ data class ScannedMediaEntity(
     val year: Int?,
     val edition: String?,
     val season: Int?,
-    val episode: Int?,
+    val episodes: String?,
     val episodeName: String?,
     val isMovie: Boolean,
 )

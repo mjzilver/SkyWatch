@@ -22,7 +22,7 @@ class FilenameParserPathTest {
     val episode = assertIs<EpisodeInfo>(results.first())
     assertEquals("Alien Earth", episode.title)
     assertEquals(1, episode.season)
-    assertEquals(1, episode.episode)
+    assertEquals(listOf(1), episode.episodes)
   }
 
   @Test
@@ -36,7 +36,35 @@ class FilenameParserPathTest {
     val episode = assertIs<EpisodeInfo>(results.first())
     assertEquals("Breaking Bad", episode.title)
     assertEquals(1, episode.season)
-    assertEquals(2, episode.episode)
+    assertEquals(listOf(2), episode.episodes)
+  }
+
+  @Test
+  fun `prefer series folder over release prefix`() {
+    val filename = "flhd-sps13e01.mkv"
+    val path = "South Park/Season 13/flhd-sps13e01.mkv"
+
+    val results = parser.parse(filename, path)
+
+    assertEquals(1, results.size)
+    val episode = assertIs<EpisodeInfo>(results.first())
+    assertEquals("South Park", episode.title)
+    assertEquals(13, episode.season)
+    assertEquals(listOf(1), episode.episodes)
+  }
+
+  @Test
+  fun `prefer series folder over extra words in filename`() {
+    val filename = "untouchables-south.park.s14e01.1080p.mkv"
+    val path = "South Park/Season 14/untouchables-south.park.s14e01.1080p.mkv"
+
+    val results = parser.parse(filename, path)
+
+    assertEquals(1, results.size)
+    val episode = assertIs<EpisodeInfo>(results.first())
+    assertEquals("South Park", episode.title)
+    assertEquals(14, episode.season)
+    assertEquals(listOf(1), episode.episodes)
   }
 
   @Test

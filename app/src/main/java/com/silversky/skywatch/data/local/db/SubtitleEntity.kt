@@ -7,14 +7,14 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "media",
-    indices = [Index(value = ["title", "year", "season", "episode", "edition"], unique = true)],
+    indices = [Index(value = ["title", "year", "season", "episodes", "edition"], unique = true)],
 )
 data class MediaEntity(
     @PrimaryKey val id: String,
     val title: String,
     val year: Int?,
     val season: Int?,
-    val episode: Int?,
+    val episodes: String?,
     val edition: String?,
 )
 

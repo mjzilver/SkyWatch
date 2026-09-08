@@ -50,7 +50,7 @@ constructor(
           allMedia
               .filterIsInstance<EpisodeInfo>()
               .filter { it.title.equals(currentTitle, ignoreCase = true) }
-              .sortedWith(compareBy({ it.season }, { it.episode }))
+              .sortedWith(compareBy({ it.season }, { it.episodes.firstOrNull() ?: 0 }))
 
       episodes = filteredEpisodes
       loadEpisodeStates(serverIp, share)
@@ -68,9 +68,15 @@ constructor(
   }
 
   fun selectEpisode(episode: EpisodeInfo, onSelected: () -> Unit) {
+    val episodeString =
+        if (episode.episodes.size > 1) {
+          "E${episode.episodes.joinToString("&E")}"
+        } else {
+          "E${episode.episodes.firstOrNull() ?: 1}"
+        }
     connectionManager.selectFileByPath(
         episode.entryPath,
-        "${episode.title} S${episode.season}E${episode.episode}",
+        "${episode.title} S${episode.season}$episodeString",
     )
     onSelected()
   }
