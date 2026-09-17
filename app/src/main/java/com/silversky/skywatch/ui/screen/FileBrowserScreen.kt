@@ -139,6 +139,7 @@ fun FileBrowserScreen(
     ) {
       BrowserTab.entries.forEach { tab ->
         val isSelected = viewModel.selectedTab == tab
+
         Button(
             onClick = { viewModel.selectTab(tab) },
             modifier = Modifier.weight(1f).focusProperties { canFocus = false },
@@ -146,8 +147,17 @@ fun FileBrowserScreen(
             colors =
                 ButtonDefaults.colors(
                     containerColor =
-                        if (isSelected && isTabRowFocused) Color.White else Color.Transparent,
-                    contentColor = if (isSelected && isTabRowFocused) Color.Black else Color.White,
+                        when {
+                          isSelected && isTabRowFocused -> Color.White
+                          isSelected -> Color.DarkGray
+                          else -> Color.Transparent
+                        },
+                    contentColor =
+                        if (isSelected && isTabRowFocused) {
+                          Color.Black
+                        } else {
+                          Color.White
+                        },
                 ),
         ) {
           Text(
@@ -159,40 +169,40 @@ fun FileBrowserScreen(
     }
 
     if (viewModel.selectedTab == BrowserTab.Folders) {
-        Spacer(modifier = Modifier.height(16.dp))
+      Spacer(modifier = Modifier.height(16.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+      Row(
+          modifier = Modifier.fillMaxWidth(),
+          verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Button(
+            onClick = { viewModel.up() },
+            enabled = canNavigateUp,
+            modifier =
+                Modifier.focusRequester(upButtonFocusRequester).focusProperties {
+                  up = tabRowFocusRequester
+                  down = listFocusRequester
+                },
         ) {
-            Button(
-                onClick = { viewModel.up() },
-                enabled = canNavigateUp,
-                modifier =
-                    Modifier.focusRequester(upButtonFocusRequester).focusProperties {
-                        up = tabRowFocusRequester
-                        down = listFocusRequester
-                    },
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowUpward,
-                        contentDescription = "Up",
-                        modifier = Modifier.size(20.dp),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Up")
-                }
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Text(
-                text = "/$currentPath",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.ArrowUpward,
+                contentDescription = "Up",
+                modifier = Modifier.size(20.dp),
             )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Up")
+          }
         }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Text(
+            text = "/$currentPath",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+      }
     }
 
     Spacer(modifier = Modifier.height(16.dp))
