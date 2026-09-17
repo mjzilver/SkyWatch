@@ -6,8 +6,8 @@ import com.silversky.core.model.MovieInfo
 import com.silversky.core.parser.FilenameParser
 import com.silversky.core.smb.MediaScanner
 import com.silversky.core.smb.SmbClient
-import com.silversky.skywatch.data.local.db.ScannedMediaDao
 import com.silversky.skywatch.data.local.db.ScannedMediaEntity
+import com.silversky.skywatch.data.local.db.ScannedMediaStore
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -17,12 +17,12 @@ import kotlinx.coroutines.withContext
 class MediaRepository
 @Inject
 constructor(
-    private val scannedMediaDao: ScannedMediaDao,
+    private val scannedMediaStore: ScannedMediaStore,
     private val filenameParser: FilenameParser,
 ) {
   suspend fun getMediaForShare(serverIp: String, shareName: String): List<MediaInfo> =
       withContext(Dispatchers.IO) {
-        val entities = scannedMediaDao.getMediaForShare(serverIp, shareName)
+        val entities = scannedMediaStore.getMediaForShare(serverIp, shareName)
 
         entities.map { entity ->
           if (entity.isMovie) {
@@ -89,8 +89,8 @@ constructor(
           }
         }
 
-        scannedMediaDao.deleteForShare(serverIp, shareName)
-        scannedMediaDao.insertAll(entities)
+        scannedMediaStore.deleteForShare(serverIp, shareName)
+        scannedMediaStore.insertAll(entities)
 
         media
       }

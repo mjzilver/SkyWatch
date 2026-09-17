@@ -7,7 +7,7 @@ import com.silversky.core.parser.FilenameParser
 import com.silversky.core.smb.SmbScanner
 import com.silversky.skywatch.data.local.PlaybackStateStore
 import com.silversky.skywatch.data.local.db.AppDatabase
-import com.silversky.skywatch.data.local.db.ScannedMediaDao
+import com.silversky.skywatch.data.local.db.ScannedMediaStore
 import com.silversky.skywatch.data.local.db.SubtitleDao
 import com.silversky.skywatch.data.repository.PersistentServerRepository
 import com.silversky.skywatch.data.repository.ServerRepository
@@ -69,7 +69,8 @@ object AppModule {
   @Provides fun provideSubtitleDao(database: AppDatabase): SubtitleDao = database.subtitleDao()
 
   @Provides
-  fun provideScannedMediaDao(database: AppDatabase): ScannedMediaDao = database.scannedMediaDao()
+  fun provideScannedMediaStore(database: AppDatabase): ScannedMediaStore =
+      database.scannedMediaDao()
 
   @Provides @Singleton fun provideFilenameParser(): FilenameParser = FilenameParser()
 }

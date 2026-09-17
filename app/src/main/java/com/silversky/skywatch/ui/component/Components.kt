@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -56,10 +57,9 @@ fun ScreenHeader(
     title: String,
     subtitle: String? = null,
     onBack: (() -> Unit)? = null,
+    downFocusRequester: FocusRequester? = null,
 ) {
-  val backFocus = remember {
-    FocusRequester()
-  }
+  val backFocus = remember { FocusRequester() }
 
   LaunchedEffect(Unit) {
     backFocus.requestFocus()
@@ -70,7 +70,13 @@ fun ScreenHeader(
       verticalAlignment = Alignment.CenterVertically,
   ) {
     if (onBack != null) {
-      BackButton(onClick = onBack, Modifier.focusRequester(backFocus))
+      BackButton(
+          onClick = onBack,
+          modifier =
+              Modifier.focusRequester(backFocus).focusProperties {
+                downFocusRequester?.let { down = it }
+              },
+      )
 
       Spacer(modifier = Modifier.width(24.dp))
     }

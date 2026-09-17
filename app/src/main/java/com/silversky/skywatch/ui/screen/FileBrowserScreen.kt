@@ -78,6 +78,8 @@ fun FileBrowserScreen(
   val listFocusRequester = remember { FocusRequester() }
   var isTabRowFocused by remember { mutableStateOf(false) }
 
+  val canNavigateUp = currentPath.isNotEmpty()
+
   BackHandler {
     viewModel.goBack(onBack)
   }
@@ -92,6 +94,7 @@ fun FileBrowserScreen(
     ScreenHeader(
         title = shareName,
         onBack = { viewModel.goBack(onBack) },
+        downFocusRequester = tabRowFocusRequester,
     )
 
     Spacer(modifier = Modifier.height(32.dp))
@@ -103,7 +106,7 @@ fun FileBrowserScreen(
                 .focusRequester(tabRowFocusRequester)
                 .focusProperties {
                   down =
-                      if (viewModel.selectedTab == BrowserTab.Folders && currentPath.isNotEmpty()) {
+                      if (viewModel.selectedTab == BrowserTab.Folders && canNavigateUp) {
                         upButtonFocusRequester
                       } else {
                         listFocusRequester
@@ -156,40 +159,40 @@ fun FileBrowserScreen(
     }
 
     if (viewModel.selectedTab == BrowserTab.Folders) {
-      Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-      Row(
-          modifier = Modifier.fillMaxWidth(),
-          verticalAlignment = Alignment.CenterVertically,
-      ) {
-        Button(
-            onClick = { viewModel.up() },
-            enabled = currentPath.isNotEmpty(),
-            modifier =
-                Modifier.focusRequester(upButtonFocusRequester).focusProperties {
-                  up = tabRowFocusRequester
-                  down = listFocusRequester
-                },
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.ArrowUpward,
-                contentDescription = "Up",
-                modifier = Modifier.size(20.dp),
+            Button(
+                onClick = { viewModel.up() },
+                enabled = canNavigateUp,
+                modifier =
+                    Modifier.focusRequester(upButtonFocusRequester).focusProperties {
+                        up = tabRowFocusRequester
+                        down = listFocusRequester
+                    },
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowUpward,
+                        contentDescription = "Up",
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Up")
+                }
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Text(
+                text = "/$currentPath",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Up")
-          }
         }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Text(
-            text = if (currentPath.isEmpty()) "/" else "/$currentPath",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-      }
     }
 
     Spacer(modifier = Modifier.height(16.dp))
@@ -207,26 +210,24 @@ fun FileBrowserScreen(
 
           else -> {
             LazyColumn(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .focusRequester(listFocusRequester)
-                        .focusProperties {
-                          up =
-                              if (currentPath.isNotEmpty()) upButtonFocusRequester
-                              else tabRowFocusRequester
-                        },
+                modifier = Modifier.fillMaxWidth().focusRequester(listFocusRequester),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
               items(
                   items = entries,
                   key = { entry -> entry.path },
               ) { entry ->
-                val progress = resumeEntries[entry.path]
-                val status = getPlaybackStatus(progress)
+                val isFirst = entry == entries.first()
 
                 FileEntryButton(
                     entry = entry,
-                    status = status,
+                    status = getPlaybackStatus(resumeEntries[entry.path]),
+                    upFocusRequester =
+                        if (isFirst && canNavigateUp) {
+                          upButtonFocusRequester
+                        } else {
+                          null
+                        },
                     onClick = {
                       if (entry.type == SmbEntryType.Directory) {
                         viewModel.navigateTo(entry.path)
@@ -404,11 +405,15 @@ private fun MediaList(
 private fun FileEntryButton(
     entry: SmbEntry,
     status: PlaybackStatus,
+    upFocusRequester: FocusRequester?,
     onClick: () -> Unit,
 ) {
   Button(
       onClick = onClick,
-      modifier = Modifier.fillMaxWidth(),
+      modifier =
+          Modifier.fillMaxWidth().focusProperties {
+            upFocusRequester?.let { up = it }
+          },
   ) {
     Row(
         modifier = Modifier.fillMaxWidth(),

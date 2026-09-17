@@ -6,13 +6,16 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 
 @Dao
-interface ScannedMediaDao {
+interface ScannedMediaDao : ScannedMediaStore {
   @Query("SELECT * FROM scanned_media WHERE serverIp = :serverIp AND shareName = :shareName")
-  suspend fun getMediaForShare(serverIp: String, shareName: String): List<ScannedMediaEntity>
+  override suspend fun getMediaForShare(
+      serverIp: String,
+      shareName: String,
+  ): List<ScannedMediaEntity>
 
   @Insert(onConflict = OnConflictStrategy.REPLACE)
-  suspend fun insertAll(media: List<ScannedMediaEntity>)
+  override suspend fun insertAll(media: List<ScannedMediaEntity>)
 
   @Query("DELETE FROM scanned_media WHERE serverIp = :serverIp AND shareName = :shareName")
-  suspend fun deleteForShare(serverIp: String, shareName: String)
+  override suspend fun deleteForShare(serverIp: String, shareName: String)
 }
