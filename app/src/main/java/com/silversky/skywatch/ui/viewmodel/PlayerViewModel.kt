@@ -20,8 +20,6 @@ import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
-import androidx.media3.exoplayer.source.LoadEventInfo
-import androidx.media3.exoplayer.source.MediaLoadData
 import com.silversky.core.logger.Logger
 import com.silversky.skywatch.data.local.PlaybackState
 import com.silversky.skywatch.data.local.PlaybackStateStore
@@ -111,16 +109,7 @@ constructor(
   var internalCues by mutableStateOf<List<Cue>>(emptyList())
     private set
 
-  var bandwidthEstimate by mutableLongStateOf(0L)
-    private set
-
-  private val bandwidthSamples = mutableListOf<Long>()
-  private val maxSamples = 5
-
   var videoBitrate by mutableIntStateOf(0)
-    private set
-
-  var showLowBandwidthWarning by mutableStateOf(false)
     private set
 
   var videoDecoderName by mutableStateOf<String?>(null)
@@ -164,32 +153,6 @@ constructor(
   private fun setupPlayer() {
     player.addAnalyticsListener(
         object : AnalyticsListener {
-          override fun onBandwidthEstimate(
-              eventTime: AnalyticsListener.EventTime,
-              totalLoadTimeMs: Int,
-              totalBytesLoaded: Long,
-              bitrateEstimate: Long,
-          ) {
-            if (bitrateEstimate > 0) {
-              addBandwidthSample(bitrateEstimate)
-            }
-          }
-
-          override fun onLoadCompleted(
-              eventTime: AnalyticsListener.EventTime,
-              loadEventInfo: LoadEventInfo,
-              mediaLoadData: MediaLoadData,
-          ) {
-            val bytes = loadEventInfo.bytesLoaded
-            val durationMs = loadEventInfo.loadDurationMs
-            if (bytes > 0 && durationMs > 0) {
-              val currentBitrate = (bytes * 8000) / durationMs
-              if (currentBitrate > 0) {
-                addBandwidthSample(currentBitrate)
-              }
-            }
-          }
-
           override fun onVideoDecoderInitialized(
               eventTime: AnalyticsListener.EventTime,
               decoderName: String,
@@ -262,32 +225,11 @@ constructor(
     )
   }
 
-  private fun addBandwidthSample(sample: Long) {
-    bandwidthSamples.add(sample)
-    if (bandwidthSamples.size > maxSamples) {
-      bandwidthSamples.removeAt(0)
-    }
-    bandwidthEstimate = bandwidthSamples.average().toLong()
-    updateBandwidthWarning()
-  }
-
   private fun updateVideoBitrate() {
     val format = player.videoFormat
     if (format != null && format.bitrate != NO_VALUE) {
       videoBitrate = format.bitrate
     }
-  }
-
-  private fun updateBandwidthWarning() {
-    val bitrate = videoBitrate
-    val estimate = bandwidthEstimate
-
-    showLowBandwidthWarning =
-        if (bitrate > 0 && estimate > 0 && player.playbackState == Player.STATE_READY) {
-          estimate < (bitrate * 1.2).toLong()
-        } else {
-          false
-        }
   }
 
   private fun startPlayback() {
@@ -406,7 +348,6 @@ constructor(
 
         if (showDebugMenu) {
           droppedFrames = player.videoDecoderCounters?.droppedBufferCount ?: 0
-          // Force bitrate/bandwidth update if needed
           updateVideoBitrate()
         }
 

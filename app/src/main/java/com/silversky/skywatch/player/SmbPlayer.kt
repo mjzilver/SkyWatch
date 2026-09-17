@@ -10,7 +10,6 @@ import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
-import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import com.silversky.core.logger.Logger
 import com.silversky.core.model.SmbEntryType
 import com.silversky.core.smb.SmbClient
@@ -120,6 +119,7 @@ fun createSmbPlayer(
   }
 
   val trackSelector = DefaultTrackSelector(context)
+  val smbDataSourceFactory = SmbDataSourceFactory(smbClient, logger)
 
   val loadControl =
       DefaultLoadControl.Builder()
@@ -133,9 +133,6 @@ fun createSmbPlayer(
           .setPrioritizeTimeOverSizeThresholds(false)
           .build()
 
-  val bandwidthMeter = DefaultBandwidthMeter.Builder(context).build()
-  val smbDataSourceFactory = SmbDataSourceFactory(smbClient, logger, bandwidthMeter)
-
   val dataSourceFactory =
       DefaultDataSource.Factory(
           context,
@@ -146,7 +143,6 @@ fun createSmbPlayer(
 
   return ExoPlayer.Builder(context)
       .setTrackSelector(trackSelector)
-      .setBandwidthMeter(bandwidthMeter)
       .setLoadControl(loadControl)
       .setMediaSourceFactory(mediaSourceFactory)
       .build()

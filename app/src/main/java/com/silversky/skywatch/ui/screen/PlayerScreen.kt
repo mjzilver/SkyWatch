@@ -232,7 +232,6 @@ fun PlayerScreen(
           position = position,
           duration = duration,
           isPlaying = isPlaying,
-          showLowBandwidthWarning = viewModel.showLowBandwidthWarning,
           onPlay = {
             registerActivity()
             viewModel.togglePlay()

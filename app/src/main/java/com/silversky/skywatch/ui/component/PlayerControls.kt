@@ -37,7 +37,6 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.tv.material3.Button
 import androidx.tv.material3.Icon
@@ -58,7 +57,6 @@ internal fun PlayerControls(
     position: Long,
     duration: Long,
     isPlaying: Boolean,
-    showLowBandwidthWarning: Boolean,
     onPlay: () -> Unit,
     onAudio: () -> Unit,
     onStop: () -> Unit,
@@ -179,14 +177,6 @@ internal fun PlayerControls(
             color = Color.White,
             modifier = Modifier.weight(1f),
         )
-
-        if (showLowBandwidthWarning) {
-          Text(
-              text = "Slow Network",
-              color = Color(0xFFFFCC00),
-              fontSize = 14.sp,
-          )
-        }
       }
 
       Spacer(modifier = Modifier.height(12.dp))

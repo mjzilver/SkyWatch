@@ -61,12 +61,6 @@ internal fun DebugInfoDialog(
           modifier = Modifier.fillMaxSize().padding(end = 16.dp),
       ) {
         item {
-          DebugSection(title = "Network") {
-            DebugItem("Throughput", formatThroughput(viewModel.bandwidthEstimate))
-          }
-        }
-
-        item {
           DebugSection(title = "Video") {
             videoFormat?.let { format ->
               Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -172,12 +166,6 @@ private fun DebugItem(
     Text(text = label, color = Color.LightGray, fontSize = 14.sp)
     Text(text = value, color = Color.White, fontSize = 14.sp)
   }
-}
-
-private fun formatThroughput(bps: Long): String {
-  if (bps <= 0) return "Measuring..."
-  val mbps = bps / 1_000_000.0
-  return "%.2f Mbps".format(mbps)
 }
 
 private fun formatBitrate(bps: Int): String {
