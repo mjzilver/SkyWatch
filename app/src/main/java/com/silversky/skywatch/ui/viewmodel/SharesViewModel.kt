@@ -11,7 +11,7 @@ import com.silversky.skywatch.data.remote.SmbConnectionManager
 import com.silversky.skywatch.error.AppError
 import com.silversky.skywatch.error.AppErrorEvent
 import com.silversky.skywatch.error.AppErrorReporter
-import com.silversky.skywatch.error.toAppError
+import com.silversky.skywatch.error.handleAsAppError
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -56,17 +56,21 @@ constructor(
           loading = false
         }
       } catch (e: Exception) {
-        logger.error("Failed to list SMB shares", e)
-        val appError = e.toAppError("Could not connect to the server or list shares.")
-        AppErrorReporter.report(
-            AppErrorEvent.ConnectionLost(
-                serverName = server?.name ?: server?.ipAddress ?: "server",
-                technicalDetails = appError.technicalMessage,
-            )
-        )
-        withContext(Dispatchers.Main) {
-          error = appError
-          loading = false
+        e.handleAsAppError(
+            logger = logger,
+            logMessage = "Failed to list SMB shares",
+            userMessage = "Could not connect to the server or list shares.",
+        ) { appError ->
+          AppErrorReporter.report(
+              AppErrorEvent.ConnectionLost(
+                  serverName = server?.name ?: server?.ipAddress ?: "server",
+                  technicalDetails = appError.technicalMessage,
+              )
+          )
+          viewModelScope.launch(Dispatchers.Main) {
+            error = appError
+            loading = false
+          }
         }
       }
     }

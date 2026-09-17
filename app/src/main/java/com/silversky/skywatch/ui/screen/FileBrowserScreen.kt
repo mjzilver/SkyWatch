@@ -1,7 +1,9 @@
 package com.silversky.skywatch.ui.screen
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,15 +11,31 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -57,6 +75,8 @@ fun FileBrowserScreen(
   val currentPath = viewModel.currentPath
   val shareName = viewModel.shareName ?: ""
 
+  var isTabRowFocused by remember { mutableStateOf(false) }
+
   BackHandler {
     viewModel.goBack(onBack)
   }
@@ -70,31 +90,92 @@ fun FileBrowserScreen(
   ) {
     ScreenHeader(
         title = shareName,
-        subtitle =
-            if (currentPath.isEmpty()) {
-              "/"
-            } else {
-              "/$currentPath"
-            },
         onBack = { viewModel.goBack(onBack) },
     )
 
     Spacer(modifier = Modifier.height(32.dp))
 
-    TabRow(
-        selectedTabIndex = viewModel.selectedTab.ordinal,
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .onFocusChanged { isTabRowFocused = it.isFocused }
+                .focusable()
+                .onKeyEvent { event ->
+                  if (event.type == KeyEventType.KeyDown) {
+                    when (event.key) {
+                      Key.DirectionLeft -> {
+                        val prevIndex = (viewModel.selectedTab.ordinal - 1).coerceAtLeast(0)
+                        viewModel.selectTab(BrowserTab.entries[prevIndex])
+                        true
+                      }
+
+                      Key.DirectionRight -> {
+                        val nextIndex =
+                            (viewModel.selectedTab.ordinal + 1).coerceAtMost(
+                                BrowserTab.entries.size - 1
+                            )
+                        viewModel.selectTab(BrowserTab.entries[nextIndex])
+                        true
+                      }
+
+                      else -> false
+                    }
+                  } else false
+                }
     ) {
-      BrowserTab.entries.forEach { tab ->
-        Tab(
-            selected = viewModel.selectedTab == tab,
-            onFocus = { viewModel.selectTab(tab) },
-            onClick = { viewModel.selectTab(tab) },
-        ) {
-          Text(
-              text = tab.name,
-              modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-          )
+      TabRow(
+          selectedTabIndex = viewModel.selectedTab.ordinal,
+          modifier = Modifier.fillMaxWidth(),
+      ) {
+        BrowserTab.entries.forEach { tab ->
+          val isSelected = viewModel.selectedTab == tab
+          Tab(
+              selected = isSelected,
+              onFocus = {},
+              onClick = { viewModel.selectTab(tab) },
+              modifier = Modifier.focusProperties { canFocus = false },
+          ) {
+            Text(
+                text = tab.name,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                color =
+                    if (isSelected && isTabRowFocused) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface,
+            )
+          }
         }
+      }
+    }
+
+    if (viewModel.selectedTab == BrowserTab.Folders) {
+      Spacer(modifier = Modifier.height(16.dp))
+
+      Row(
+          modifier = Modifier.fillMaxWidth(),
+          verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Button(
+            onClick = { viewModel.up() },
+            enabled = currentPath.isNotEmpty(),
+        ) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.ArrowUpward,
+                contentDescription = "Up",
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Up")
+          }
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Text(
+            text = if (currentPath.isEmpty()) "/" else "/$currentPath",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
       }
     }
 

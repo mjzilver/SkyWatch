@@ -30,7 +30,7 @@ import com.silversky.skywatch.data.repository.SubtitleRepository
 import com.silversky.skywatch.error.AppError
 import com.silversky.skywatch.error.AppErrorEvent
 import com.silversky.skywatch.error.AppErrorReporter
-import com.silversky.skywatch.error.toAppError
+import com.silversky.skywatch.error.handleAsAppError
 import com.silversky.skywatch.player.SubtitleCue
 import com.silversky.skywatch.player.SubtitleParser
 import com.silversky.skywatch.player.createSmbPlayer
@@ -75,6 +75,10 @@ constructor(
 
   var error by mutableStateOf<AppError?>(null)
     private set
+
+  fun clearError() {
+    error = null
+  }
 
   var controlsVisible by mutableStateOf(true)
 
@@ -216,10 +220,14 @@ constructor(
           }
 
           override fun onPlayerError(playbackException: PlaybackException) {
-            logger.error("PLAYER ERROR: ${playbackException.errorCodeName}", playbackException)
-            error = playbackException.toAppError()
-            loading = false
-            controlsVisible = false
+            playbackException.handleAsAppError(
+                logger = logger,
+                logMessage = "PLAYER ERROR: ${playbackException.errorCodeName}",
+            ) { appError ->
+              error = appError
+              loading = false
+              controlsVisible = false
+            }
           }
         }
     )
@@ -272,20 +280,23 @@ constructor(
         player.playWhenReady = true
         loading = false
       } catch (e: Exception) {
-        logger.error("Failed to start playback: ${smbFile.name}", e)
-        if (isClosedShareError(e)) {
-          connectionManager.clearFile()
-          connectionManager.clearShare()
-          AppErrorReporter.report(
-              AppErrorEvent.ConnectionLost(
-                  client.server?.name ?: client.server?.ipAddress ?: "server"
-              )
-          )
-          return@launch
+        e.handleAsAppError(
+            logger = logger,
+            logMessage = "Failed to start playback: ${smbFile.name}",
+        ) { appError ->
+          if (isClosedShareError(e)) {
+            connectionManager.clearFile()
+            connectionManager.clearShare()
+            AppErrorReporter.report(
+                AppErrorEvent.ConnectionLost(
+                    client.server?.name ?: client.server?.ipAddress ?: "server"
+                )
+            )
+          } else {
+            error = appError
+          }
+          loading = false
         }
-
-        loading = false
-        error = e.toAppError()
       }
     }
   }

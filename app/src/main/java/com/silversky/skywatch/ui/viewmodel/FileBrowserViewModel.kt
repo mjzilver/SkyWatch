@@ -19,7 +19,7 @@ import com.silversky.skywatch.data.repository.SettingsRepository
 import com.silversky.skywatch.error.AppError
 import com.silversky.skywatch.error.AppErrorEvent
 import com.silversky.skywatch.error.AppErrorReporter
-import com.silversky.skywatch.error.toAppError
+import com.silversky.skywatch.error.handleAsAppError
 import com.silversky.skywatch.model.BrowserTab
 import com.silversky.skywatch.model.SortBy
 import com.silversky.skywatch.model.SortOrder
@@ -120,19 +120,23 @@ constructor(
           loading = false
         }
       } catch (e: Exception) {
-        logger.error("Failed to list //$shareName/$currentPath", e)
-        val appError = e.toAppError("Could not list files on the server.")
-        AppErrorReporter.report(
-            AppErrorEvent.ConnectionLost(
-                serverName = server?.name ?: server?.ipAddress ?: shareName,
-                technicalDetails = appError.technicalMessage,
-            )
-        )
-        withContext(Dispatchers.Main) {
-          error = appError
-          rawEntries = emptyList()
-          entries = emptyList()
-          loading = false
+        e.handleAsAppError(
+            logger = logger,
+            logMessage = "Failed to list //$shareName/$currentPath",
+            userMessage = "Could not list files on the server.",
+        ) { appError ->
+          AppErrorReporter.report(
+              AppErrorEvent.ConnectionLost(
+                  serverName = server?.name ?: server?.ipAddress ?: shareName,
+                  technicalDetails = appError.technicalMessage,
+              )
+          )
+          viewModelScope.launch(Dispatchers.Main) {
+            error = appError
+            rawEntries = emptyList()
+            entries = emptyList()
+            loading = false
+          }
         }
       }
     }
@@ -198,14 +202,16 @@ constructor(
     loadEntries()
   }
 
-  fun goBack(onBack: () -> Unit) {
-    if (currentPath.isEmpty()) {
-      connectionManager.clearShare()
-      onBack()
-    } else {
+  fun up() {
+    if (currentPath.isNotEmpty()) {
       currentPath = parentPath(currentPath)
       loadEntries()
     }
+  }
+
+  fun goBack(onBack: () -> Unit) {
+    connectionManager.clearShare()
+    onBack()
   }
 
   private fun parentPath(path: String): String {
@@ -293,7 +299,10 @@ constructor(
         updateGroups()
         loadMediaPlaybackStates()
       } catch (e: Exception) {
-        logger.error("Failed to scan media", e)
+        e.handleAsAppError(
+            logger = logger,
+            logMessage = "Failed to scan media",
+        ) {}
       } finally {
         isScanning = false
       }

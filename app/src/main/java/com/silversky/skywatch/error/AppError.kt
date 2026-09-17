@@ -1,6 +1,8 @@
 package com.silversky.skywatch.error
 
 import androidx.media3.common.PlaybackException
+import com.silversky.core.logger.Logger
+import kotlinx.coroutines.CancellationException
 
 data class AppError(
     val userMessage: String,
@@ -65,4 +67,16 @@ fun Throwable.toAppError(userMessage: String = "An unexpected error occurred"): 
           .toString()
 
   return AppError(userMessage, technicalDetails)
+}
+
+fun Throwable.handleAsAppError(
+    logger: Logger,
+    logMessage: String,
+    userMessage: String = "An unexpected error occurred",
+    onAppError: (AppError) -> Unit,
+) {
+  if (this is CancellationException) throw this
+
+  logger.error(logMessage, this)
+  onAppError(this.toAppError(userMessage))
 }

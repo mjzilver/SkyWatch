@@ -210,7 +210,7 @@ fun PlayerScreen(
     if (error != null) {
       AppErrorOverlay(
           error = error,
-          onClose = { viewModel.back(onBack) },
+          onClose = { viewModel.clearError() },
       )
     }
 
@@ -225,7 +225,7 @@ fun PlayerScreen(
       )
     }
 
-    if (controlsVisible && !loading && error == null) {
+    if (controlsVisible && !loading) {
       PlayerControls(
           player = player,
           file = file,

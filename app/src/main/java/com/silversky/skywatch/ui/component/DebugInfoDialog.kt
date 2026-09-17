@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,7 +45,7 @@ internal fun DebugInfoDialog(
   SkyWatchDialog(
       title = "Playback Information",
       onDismiss = onDismiss,
-      modifier = Modifier.fillMaxWidth(0.65f),
+      modifier = Modifier.fillMaxWidth(0.8f).widthIn(max = 1200.dp),
       buttons = {
         PlayerButton(
             text = "Close",
