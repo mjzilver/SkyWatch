@@ -3,7 +3,6 @@ package com.silversky.skywatch.ui.screen
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -38,11 +37,10 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Tab
-import androidx.tv.material3.TabRow
 import androidx.tv.material3.Text
 import com.silversky.core.model.EpisodeInfo
 import com.silversky.core.model.MovieInfo
@@ -75,6 +73,9 @@ fun FileBrowserScreen(
   val currentPath = viewModel.currentPath
   val shareName = viewModel.shareName ?: ""
 
+  val tabRowFocusRequester = remember { FocusRequester() }
+  val upButtonFocusRequester = remember { FocusRequester() }
+  val listFocusRequester = remember { FocusRequester() }
   var isTabRowFocused by remember { mutableStateOf(false) }
 
   BackHandler {
@@ -95,10 +96,19 @@ fun FileBrowserScreen(
 
     Spacer(modifier = Modifier.height(32.dp))
 
-    Box(
+    Row(
         modifier =
             Modifier.fillMaxWidth()
                 .onFocusChanged { isTabRowFocused = it.isFocused }
+                .focusRequester(tabRowFocusRequester)
+                .focusProperties {
+                  down =
+                      if (viewModel.selectedTab == BrowserTab.Folders && currentPath.isNotEmpty()) {
+                        upButtonFocusRequester
+                      } else {
+                        listFocusRequester
+                      }
+                }
                 .focusable()
                 .onKeyEvent { event ->
                   if (event.type == KeyEventType.KeyDown) {
@@ -121,28 +131,26 @@ fun FileBrowserScreen(
                       else -> false
                     }
                   } else false
-                }
+                },
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-      TabRow(
-          selectedTabIndex = viewModel.selectedTab.ordinal,
-          modifier = Modifier.fillMaxWidth(),
-      ) {
-        BrowserTab.entries.forEach { tab ->
-          val isSelected = viewModel.selectedTab == tab
-          Tab(
-              selected = isSelected,
-              onFocus = {},
-              onClick = { viewModel.selectTab(tab) },
-              modifier = Modifier.focusProperties { canFocus = false },
-          ) {
-            Text(
-                text = tab.name,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                color =
-                    if (isSelected && isTabRowFocused) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurface,
-            )
-          }
+      BrowserTab.entries.forEach { tab ->
+        val isSelected = viewModel.selectedTab == tab
+        Button(
+            onClick = { viewModel.selectTab(tab) },
+            modifier = Modifier.weight(1f).focusProperties { canFocus = false },
+            scale = ButtonDefaults.scale(focusedScale = 1f),
+            colors =
+                ButtonDefaults.colors(
+                    containerColor =
+                        if (isSelected && isTabRowFocused) Color.White else Color.Transparent,
+                    contentColor = if (isSelected && isTabRowFocused) Color.Black else Color.White,
+                ),
+        ) {
+          Text(
+              text = tab.name,
+              style = MaterialTheme.typography.labelLarge,
+          )
         }
       }
     }
@@ -157,6 +165,11 @@ fun FileBrowserScreen(
         Button(
             onClick = { viewModel.up() },
             enabled = currentPath.isNotEmpty(),
+            modifier =
+                Modifier.focusRequester(upButtonFocusRequester).focusProperties {
+                  up = tabRowFocusRequester
+                  down = listFocusRequester
+                },
         ) {
           Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -194,7 +207,14 @@ fun FileBrowserScreen(
 
           else -> {
             LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .focusRequester(listFocusRequester)
+                        .focusProperties {
+                          up =
+                              if (currentPath.isNotEmpty()) upButtonFocusRequester
+                              else tabRowFocusRequester
+                        },
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
               items(
@@ -226,6 +246,8 @@ fun FileBrowserScreen(
             groups = viewModel.movieGroups,
             resumeStates = viewModel.mediaResumeStates,
             isScanning = viewModel.isScanning,
+            tabRowFocusRequester = tabRowFocusRequester,
+            listFocusRequester = listFocusRequester,
             onClick = { group ->
               val versions = group.items.filterIsInstance<MovieInfo>()
               if (versions.size == 1) {
@@ -259,6 +281,8 @@ fun FileBrowserScreen(
             groups = viewModel.seriesGroups,
             resumeStates = viewModel.mediaResumeStates,
             isScanning = viewModel.isScanning,
+            tabRowFocusRequester = tabRowFocusRequester,
+            listFocusRequester = listFocusRequester,
             onClick = { group ->
               viewModel.startSeriesSelection(group.title, onSeriesSelected)
             },
@@ -310,6 +334,8 @@ private fun MediaList(
     groups: List<MediaGroup>,
     resumeStates: Map<String, PlaybackState>,
     isScanning: Boolean,
+    tabRowFocusRequester: FocusRequester,
+    listFocusRequester: FocusRequester,
     onClick: (MediaGroup) -> Unit,
     trailingContent: @Composable (MediaGroup) -> Unit = {},
 ) {
@@ -324,7 +350,10 @@ private fun MediaList(
   }
 
   LazyColumn(
-      modifier = Modifier.fillMaxWidth(),
+      modifier =
+          Modifier.fillMaxWidth().focusRequester(listFocusRequester).focusProperties {
+            up = tabRowFocusRequester
+          },
       verticalArrangement = Arrangement.spacedBy(8.dp),
   ) {
     items(
