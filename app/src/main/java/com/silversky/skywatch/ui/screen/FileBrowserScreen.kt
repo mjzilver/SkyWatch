@@ -81,7 +81,11 @@ fun FileBrowserScreen(
   val canNavigateUp = currentPath.isNotEmpty()
 
   BackHandler {
-    viewModel.goBack(onBack)
+    if (viewModel.selectedTab == BrowserTab.Folders && canNavigateUp) {
+      viewModel.up()
+    } else {
+      viewModel.goBack(onBack)
+    }
   }
 
   LaunchedEffect(Unit) {
